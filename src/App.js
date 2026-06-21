@@ -58,6 +58,17 @@ export default function App() {
   });
 
   const getEventsForDay = (day) => currentMonthEvents.filter(e => new Date(e.start_datetime).getDate() === day);
+  
+  // Calculate Stats
+  const holidays = currentMonthEvents.filter(e => e.title.toLowerCase().includes('holiday'));
+  const totalEvents = currentMonthEvents.length;
+  
+  let workingDaysTotal = 0;
+  for (let i = 1; i <= daysInMonth; i++) {
+    const d = new Date(year, month, i).getDay();
+    if (d !== 0 && d !== 6) workingDaysTotal++;
+  }
+  const workingDaysFree = Math.max(0, workingDaysTotal - currentMonthEvents.length);
 
   return (
     <div className="min-h-screen bg-slate-50 p-2 sm:p-8 font-sans">
@@ -71,6 +82,21 @@ export default function App() {
               {loading ? 'Processing...' : '📸 Upload Schedule'}
             </button>
           </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+          {[
+            { label: "Total Events", val: totalEvents, color: "text-indigo-600" },
+            { label: "Holidays", val: holidays.length, color: "text-red-600" },
+            { label: "Working Days (Total)", val: workingDaysTotal, color: "text-slate-600" },
+            { label: "Working Days (Free)", val: workingDaysFree, color: "text-green-600" },
+          ].map(stat => (
+            <div key={stat.label} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
+              <div className="text-xs text-slate-400 font-bold uppercase">{stat.label}</div>
+              <div className={`text-2xl font-bold ${stat.color}`}>{stat.val}</div>
+            </div>
+          ))}
         </div>
 
         {/* Calendar Grid */}
