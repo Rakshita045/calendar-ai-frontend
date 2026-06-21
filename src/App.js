@@ -4,6 +4,7 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const fetchEvents = async () => {
     try {
@@ -56,78 +57,69 @@ export default function App() {
     return ed.getMonth() === month && ed.getFullYear() === year;
   });
 
-  const holidays = currentMonthEvents.filter(e => e.title.toLowerCase().includes('holiday'));
-  const totalEvents = currentMonthEvents.length;
-  
-  let workingDaysTotal = 0;
-  for (let i = 1; i <= daysInMonth; i++) {
-    const d = new Date(year, month, i).getDay();
-    if (d !== 0 && d !== 6) workingDaysTotal++;
-  }
-  const workingDaysExcludingEvents = workingDaysTotal - currentMonthEvents.length;
+  const getEventsForDay = (day) => currentMonthEvents.filter(e => new Date(e.start_datetime).getDate() === day);
 
   return (
     <div className="min-h-screen bg-slate-50 p-2 sm:p-8 font-sans">
       <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
-          <div className="text-center sm:text-left">
-            <h1 className="text-xl sm:text-3xl font-bold text-slate-800">My AI Calendar</h1>
-            <p className="text-xs sm:text-sm text-slate-500">Sync your schedule via image upload.</p>
-          </div>
-          <div className="relative w-full sm:w-auto">
+          <h1 className="text-xl sm:text-3xl font-bold text-slate-800">My AI Calendar</h1>
+          <div className="relative">
             <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={loading} />
-            <button className={`w-full px-4 py-3 rounded-lg font-semibold text-white transition-all ${loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-              {loading ? 'Processing...' : '📸 Upload'}
+            <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all">
+              {loading ? 'Processing...' : '📸 Upload Schedule'}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: "Total Events", val: totalEvents, color: "text-indigo-600" },
-            { label: "Holidays", val: holidays.length, color: "text-red-600" },
-            { label: "Working Days (Total)", val: workingDaysTotal, color: "text-slate-600" },
-            { label: "Working Days (Free)", val: Math.max(0, workingDaysExcludingEvents), color: "text-green-600" },
-          ].map(stat => (
-            <div key={stat.label} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
-              <div className="text-xs text-slate-400 font-bold uppercase">{stat.label}</div>
-              <div className={`text-2xl font-bold ${stat.color}`}>{stat.val}</div>
-            </div>
-          ))}
-        </div>
-
+        {/* Calendar Grid */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-4 bg-slate-800 text-white">
-            <button onClick={prevMonth} className="text-sm">Prev</button>
+            <button onClick={prevMonth}>Prev</button>
             <h2 className="text-lg font-bold">{monthName} {year}</h2>
-            <button onClick={nextMonth} className="text-sm">Next</button>
+            <button onClick={nextMonth}>Next</button>
           </div>
           <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200">
-            {['S','M','T','W','T','F','S'].map(d => <div key={d} className="py-2 text-center text-xs font-bold text-slate-500">{d}</div>)}
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} className="py-2 text-center text-xs font-bold text-slate-500">{d}</div>)}
           </div>
-          <div className="grid grid-cols-7 auto-rows-[80px] sm:auto-rows-[120px]">
-            {[...Array(firstDayOfMonth)].map((_, i) => <div key={`b-${i}`} className="border-b border-r border-slate-100 bg-slate-50/50"></div>)}
+          <div className="grid grid-cols-7 auto-rows-[100px]">
+            {[...Array(firstDayOfMonth)].map((_, i) => <div key={`b-${i}`} className="bg-slate-50 border-b border-r border-slate-100"></div>)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-              const dayEvents = currentMonthEvents.filter(e => new Date(e.start_datetime).getDate() === day);
+              const dayEvents = getEventsForDay(day);
+              const isSunday = new Date(year, month, day).getDay() === 0;
               return (
-                <div key={day} className="border-b border-r border-slate-100 p-1 sm:p-2 hover:bg-slate-50 overflow-hidden">
-                  <div className="text-xs text-slate-400 font-bold">{day}</div>
-                  <div className="space-y-1 mt-1">
-                    {dayEvents.map(e => {
-                      const isHoliday = e.title.toLowerCase().includes('holiday');
-                      return (
-                        <div key={e.id} className={`text-[10px] sm:text-xs p-0.5 sm:p-1 rounded truncate ${isHoliday ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                          {e.title}
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div key={day} onClick={() => setSelectedDay(day)} className={`border-b border-r border-slate-100 p-2 cursor-pointer hover:bg-indigo-50 transition-colors ${isSunday ? 'bg-red-50' : ''}`}>
+                  <div className="text-xs font-bold text-slate-400">{day}</div>
+                  {dayEvents.slice(0, 2).map(e => (
+                    <div key={e.id} className="text-[10px] bg-indigo-100 text-indigo-700 p-1 rounded mt-1 truncate">{e.title}</div>
+                  ))}
+                  {dayEvents.length > 2 && <div className="text-[10px] text-slate-400">+{dayEvents.length - 2} more</div>}
                 </div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* Modal for Full Day View */}
+      {selectedDay && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedDay(null)}>
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4">Schedule for {selectedDay} {monthName}</h2>
+            <div className="space-y-3">
+              {getEventsForDay(selectedDay).map(e => (
+                <div key={e.id} className="p-3 bg-slate-100 rounded-lg">
+                  <div className="font-bold">{e.title}</div>
+                  <div className="text-sm text-slate-600">{e.description}</div>
+                </div>
+              ))}
+              {getEventsForDay(selectedDay).length === 0 && <p className="text-slate-400">No events for this day.</p>}
+            </div>
+            <button className="mt-6 w-full py-2 bg-slate-800 text-white rounded-lg" onClick={() => setSelectedDay(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
