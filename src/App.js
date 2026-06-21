@@ -11,7 +11,9 @@ export default function App() {
       const response = await fetch('https://calendar-ai-backend-t8u7.onrender.com/events/');
       const data = await response.json();
       if (data.status === 'success') {
-        setEvents(data.data);
+        // Filter out events scheduled on Sundays (Day index 0)
+        const validEvents = data.data.filter(e => new Date(e.start_datetime).getDay() !== 0);
+        setEvents(validEvents);
       }
     } catch (error) {
       console.error("Error fetching events:", error);
