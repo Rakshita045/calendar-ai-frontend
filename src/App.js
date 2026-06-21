@@ -45,7 +45,9 @@ export default function App() {
       const hasSundayEvent = result.data?.some(e => new Date(e.start_datetime).getDay() === 0);
       
       if (hasSundayEvent) {
-        setAlertMsg("Some events were ignored because they were scheduled on a Sunday.");
+        setAlertMsg("Events could not be scheduled on Sunday. These events have been ignored.");
+      } else {
+        setAlertMsg(null);
       }
       
       if (response.ok) fetchEvents();
