@@ -5,6 +5,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [selectedDay, setSelectedDay] = useState(null);
+  const [alertMsg, setAlertMsg] = useState(null);
 
   const fetchEvents = async () => {
     try {
@@ -37,6 +38,16 @@ export default function App() {
         method: 'POST',
         body: formData,
       });
+      
+      const result = await response.json();
+      
+      // Check if any extracted event falls on a Sunday
+      const hasSundayEvent = result.data?.some(e => new Date(e.start_datetime).getDay() === 0);
+      
+      if (hasSundayEvent) {
+        setAlertMsg("Some events were ignored because they were scheduled on a Sunday.");
+      }
+      
       if (response.ok) fetchEvents();
     } catch (error) {
       console.error("Failed to upload.");
@@ -85,6 +96,14 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Alert Notification */}
+        {alertMsg && (
+          <div className="mb-6 p-4 bg-amber-100 text-amber-800 rounded-xl border border-amber-200 flex justify-between items-center">
+            <span>{alertMsg}</span>
+            <button onClick={() => setAlertMsg(null)} className="font-bold">✕</button>
+          </div>
+        )}
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
