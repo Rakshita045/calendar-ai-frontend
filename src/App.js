@@ -3,7 +3,10 @@ import React, { useState, useEffect } from 'react';
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  
+  // FIX: Initialize to today's date instead of hardcoding 2026-08-01
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
   const [selectedDay, setSelectedDay] = useState(null);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -12,7 +15,6 @@ export default function App() {
       const response = await fetch('https://calendar-ai-backend-t8u7.onrender.com/events/');
       const data = await response.json();
       if (data.status === 'success') {
-        // Filter out events scheduled on Sundays (Day index 0)
         const validEvents = data.data.filter(e => new Date(e.start_datetime).getDay() !== 0);
         setEvents(validEvents);
       }
@@ -40,8 +42,6 @@ export default function App() {
       });
       
       const result = await response.json();
-      
-      // Check if any extracted event falls on a Sunday
       const hasSundayEvent = result.data?.some(e => new Date(e.start_datetime).getDay() === 0);
       
       if (hasSundayEvent) {
@@ -74,7 +74,6 @@ export default function App() {
 
   const getEventsForDay = (day) => currentMonthEvents.filter(e => new Date(e.start_datetime).getDate() === day);
   
-  // Calculate Stats
   const holidays = currentMonthEvents.filter(e => e.title.toLowerCase().includes('holiday'));
   const totalEvents = currentMonthEvents.length;
   
@@ -88,7 +87,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 p-2 sm:p-8 font-sans">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
           <h1 className="text-xl sm:text-3xl font-bold text-slate-800">My AI Calendar</h1>
           <div className="relative">
@@ -99,7 +97,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Alert Notification */}
         {alertMsg && (
           <div className="mb-6 p-4 bg-amber-100 text-amber-800 rounded-xl border border-amber-200 flex justify-between items-center">
             <span>{alertMsg}</span>
@@ -107,7 +104,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Stats Section */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
           {[
             { label: "Total Events", val: totalEvents, color: "text-indigo-600" },
@@ -122,7 +118,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Calendar Grid */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-4 bg-slate-800 text-white">
             <button onClick={prevMonth}>Prev</button>
@@ -151,7 +146,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Modal for Full Day View */}
       {selectedDay && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedDay(null)}>
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
