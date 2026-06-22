@@ -49,8 +49,10 @@ export default function App() {
       if (response.ok) fetchEvents();
     } catch (error) {
       console.error("Failed to upload.");
+      alert("Upload failed. Check console for details.");
     } finally {
       setLoading(false);
+      event.target.value = '';
     }
   };
 
