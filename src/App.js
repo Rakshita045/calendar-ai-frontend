@@ -3,10 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // FIX: Initialize to today's date instead of hardcoding 2026-08-01
   const [currentDate, setCurrentDate] = useState(new Date());
-  
   const [selectedDay, setSelectedDay] = useState(null);
   const [alertMsg, setAlertMsg] = useState(null);
 
@@ -36,7 +33,7 @@ export default function App() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('https://calendar-ai-backend-t8u7.onrender.com/upload-event-image/', {
+      const response = await fetch('https://calendar-ai-backend-t8u7.onrender.com/upload-event-file/', {
         method: 'POST',
         body: formData,
       });
@@ -73,16 +70,6 @@ export default function App() {
   });
 
   const getEventsForDay = (day) => currentMonthEvents.filter(e => new Date(e.start_datetime).getDate() === day);
-  
-  const holidays = currentMonthEvents.filter(e => e.title.toLowerCase().includes('holiday'));
-  const totalEvents = currentMonthEvents.length;
-  
-  let workingDaysTotal = 0;
-  for (let i = 1; i <= daysInMonth; i++) {
-    const d = new Date(year, month, i).getDay();
-    if (d !== 0 && d !== 6) workingDaysTotal++;
-  }
-  const workingDaysFree = Math.max(0, workingDaysTotal - currentMonthEvents.length);
 
   return (
     <div className="min-h-screen bg-slate-50 p-2 sm:p-8 font-sans">
@@ -90,7 +77,13 @@ export default function App() {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 gap-4">
           <h1 className="text-xl sm:text-3xl font-bold text-slate-800">My AI Calendar</h1>
           <div className="relative">
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={loading} />
+            <input 
+              type="file" 
+              accept="image/*, application/pdf" 
+              onChange={handleImageUpload} 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+              disabled={loading} 
+            />
             <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all">
               {loading ? 'Processing...' : '📸 Upload Schedule'}
             </button>
@@ -103,20 +96,6 @@ export default function App() {
             <button onClick={() => setAlertMsg(null)} className="font-bold">✕</button>
           </div>
         )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: "Total Events", val: totalEvents, color: "text-indigo-600" },
-            { label: "Holidays", val: holidays.length, color: "text-red-600" },
-            { label: "Working Days (Total)", val: workingDaysTotal, color: "text-slate-600" },
-            { label: "Working Days (Free)", val: workingDaysFree, color: "text-green-600" },
-          ].map(stat => (
-            <div key={stat.label} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
-              <div className="text-xs text-slate-400 font-bold uppercase">{stat.label}</div>
-              <div className={`text-2xl font-bold ${stat.color}`}>{stat.val}</div>
-            </div>
-          ))}
-        </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-4 bg-slate-800 text-white">
@@ -138,31 +117,12 @@ export default function App() {
                   {dayEvents.slice(0, 2).map(e => (
                     <div key={e.id} className="text-[10px] bg-indigo-100 text-indigo-700 p-1 rounded mt-1 truncate">{e.title}</div>
                   ))}
-                  {dayEvents.length > 2 && <div className="text-[10px] text-slate-400">+{dayEvents.length - 2} more</div>}
                 </div>
               );
             })}
           </div>
         </div>
       </div>
-
-      {selectedDay && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedDay(null)}>
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold mb-4">Schedule for {selectedDay} {monthName}</h2>
-            <div className="space-y-3">
-              {getEventsForDay(selectedDay).map(e => (
-                <div key={e.id} className="p-3 bg-slate-100 rounded-lg">
-                  <div className="font-bold">{e.title}</div>
-                  <div className="text-sm text-slate-600">{e.description}</div>
-                </div>
-              ))}
-              {getEventsForDay(selectedDay).length === 0 && <p className="text-slate-400">No events for this day.</p>}
-            </div>
-            <button className="mt-6 w-full py-2 bg-slate-800 text-white rounded-lg" onClick={() => setSelectedDay(null)}>Close</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
