@@ -4,7 +4,6 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(null);
   const [alertMsg, setAlertMsg] = useState(null);
 
   const fetchEvents = async () => {
@@ -24,7 +23,7 @@ export default function App() {
     fetchEvents();
   }, []);
 
-  const handleImageUpload = async (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -80,7 +79,7 @@ export default function App() {
             <input 
               type="file" 
               accept="image/*, application/pdf" 
-              onChange={handleImageUpload} 
+              onChange={handleFileUpload} 
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
               disabled={loading} 
             />
@@ -112,7 +111,7 @@ export default function App() {
               const dayEvents = getEventsForDay(day);
               const isSunday = new Date(year, month, day).getDay() === 0;
               return (
-                <div key={day} onClick={() => setSelectedDay(day)} className={`border-b border-r border-slate-100 p-2 cursor-pointer hover:bg-indigo-50 transition-colors ${isSunday ? 'bg-red-50' : ''}`}>
+                <div key={day} className={`border-b border-r border-slate-100 p-2 transition-colors ${isSunday ? 'bg-red-50' : ''}`}>
                   <div className="text-xs font-bold text-slate-400">{day}</div>
                   {dayEvents.slice(0, 2).map(e => (
                     <div key={e.id} className="text-[10px] bg-indigo-100 text-indigo-700 p-1 rounded mt-1 truncate">{e.title}</div>
