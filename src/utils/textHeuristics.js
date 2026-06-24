@@ -28,44 +28,46 @@ const ROMAN_MAP = {
  */
 function extractSemesters(text) {
   const lowercase = text.toLowerCase();
+  
+  // Exclude midterm/MST index prefixes so we do not extract the exam number as a semester
+  const textForAnalysis = lowercase
+    .replace(/\b(?:first|1st|i|1)\b\s*(?:mid[- ]term|midterm|mst)/g, '')
+    .replace(/\b(?:second|2nd|ii|2)\b\s*(?:mid[- ]term|midterm|mst)/g, '');
+
   const semesters = new Set();
 
-  // Look for patterns like "sem 7", "sem-7", "semester VII", "7th semester", etc.
-  const regexes = [
-    /\b(?:sem|semester|term)\b\s*[-#:]?\s*([1-8ivx]+)/gi,
-    /([1-8])(?:st|nd|rd|th)\s*(?:sem|semester)/gi,
-    /\b(first|second|third|fourth|fifth|sixth|seventh|eighth)\s*(?:sem|semester)/gi,
-    /\b([1-8ivx]+)(?:st|nd|rd|th)?\s+(?:sem|semester|term)\b/gi
-  ];
+  // Require academic/semester context to prevent false positives in holiday dates or names
+  const hasAcademicKeyword = /\b(?:sem|semester|term|class|classes|commencement|exam|mst|test|practical|viva|instruction|teaching)\b/i.test(lowercase);
+  if (!hasAcademicKeyword) {
+    return [];
+  }
 
-  for (const regex of regexes) {
-    let match;
-    // Reset regex lastIndex
-    regex.lastIndex = 0;
-    while ((match = regex.exec(lowercase)) !== null) {
-      const val = match[1];
-      if (!val) continue;
-
-      // 1. Check if digits 1-8
-      if (/^[1-8]$/.test(val)) {
-        semesters.add(parseInt(val, 10));
-      }
-      // 2. Check if Roman numerals i to viii
-      else if (ROMAN_MAP[val]) {
-        semesters.add(ROMAN_MAP[val]);
-      }
-      // 3. Check if word semester
-      else {
-        const words = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
-        const idx = words.indexOf(val);
-        if (idx !== -1) {
-          semesters.add(idx + 1);
-        }
-      }
+  // Look for Roman numerals I to VIII as standalone words (check longest first to prevent partial match issues)
+  const romanPattern = /\b(viii|vii|vi|iv|v|iii|ii|i)\b/g;
+  let match;
+  while ((match = romanPattern.exec(textForAnalysis)) !== null) {
+    const val = match[1];
+    if (ROMAN_MAP[val]) {
+      semesters.add(ROMAN_MAP[val]);
     }
   }
 
-  return Array.from(semesters);
+  // Look for digits 1 to 8 (optionally followed by ordinal suffix, e.g. "5th", "5")
+  const digitPattern = /\b([1-8])(?:st|nd|rd|th)?\b/g;
+  while ((match = digitPattern.exec(textForAnalysis)) !== null) {
+    semesters.add(parseInt(match[1], 10));
+  }
+
+  // Look for written semester words (first to eighth)
+  const words = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
+  for (let i = 0; i < words.length; i++) {
+    const wordPattern = new RegExp(`\\b${words[i]}\\b`, 'g');
+    if (wordPattern.test(textForAnalysis)) {
+      semesters.add(i + 1);
+    }
+  }
+
+  return Array.from(semesters).sort((a, b) => a - b);
 }
 
 /**

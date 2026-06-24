@@ -125,6 +125,48 @@ export default function App() {
   const [calendarPopupDate, setCalendarPopupDate] = useState(null);
   const [calendarPopupForm, setCalendarPopupForm] = useState({ title: '', type: 'holiday', semesterSpec: 'all', customCourseId: '' });
 
+  const getAvailableSemestersForEvents = (currentEvents) => {
+    let oddMentions = 0;
+    let evenMentions = 0;
+    
+    for (const e of currentEvents) {
+      if (e.semesters && e.semesters.length > 0) {
+        for (const sem of e.semesters) {
+          if ([1, 3, 5, 7].includes(sem)) oddMentions++;
+          if ([2, 4, 6, 8].includes(sem)) evenMentions++;
+        }
+      }
+    }
+    
+    let termType = 'all';
+    if (evenMentions > oddMentions) {
+      termType = 'even';
+    } else if (oddMentions > evenMentions) {
+      termType = 'odd';
+    } else {
+      // Guess based on month of the events (Even semesters are usually Jan-June, Odd are July-Dec)
+      let janToJune = 0;
+      let julyToDec = 0;
+      for (const e of currentEvents) {
+        if (e.date) {
+          const month = new Date(e.date).getMonth(); // 0-11
+          if (month >= 0 && month <= 5) janToJune++;
+          else if (month >= 6 && month <= 11) julyToDec++;
+        }
+      }
+      if (janToJune > julyToDec) termType = 'even';
+      else if (julyToDec > janToJune) termType = 'odd';
+    }
+    
+    if (termType === 'even') return [2, 4, 6, 8];
+    if (termType === 'odd') return [1, 3, 5, 7];
+    return [1, 2, 3, 4, 5, 6, 7, 8];
+  };
+
+  const getAvailableSemesters = () => {
+    return getAvailableSemestersForEvents(events);
+  };
+
   // Load Sessions index and current session data on mount
   useEffect(() => {
     const savedSessionsIndex = localStorage.getItem('academic_sessions_index');
@@ -485,13 +527,17 @@ export default function App() {
     }
     const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    // Automatically select the first detected semester if any are found
-    const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
-    const targetSem = detectedSemesters.includes(semester) ? semester : (detectedSemesters[0] || semester);
-    if (detectedSemesters.length > 0 && targetSem !== semester) {
-      setSemester(targetSem);
-    }
+    // Determine the available semesters based on even/odd semester context of the new events list
+    const availableSems = getAvailableSemestersForEvents(sorted);
     
+    // Find the semesters explicitly detected in the calendar
+    const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
+    const explicitDetected = detectedSemesters.filter(s => availableSems.includes(s));
+    
+    // Target semester is the first explicit one, or the first available one (e.g. 2 for even, 1 for odd)
+    const targetSem = explicitDetected.length > 0 ? explicitDetected[0] : availableSems[0];
+    
+    setSemester(targetSem);
     setEvents(sorted);
     detectTermDates(targetSem, sorted);
 
@@ -571,13 +617,17 @@ export default function App() {
         }
         const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
         
-        // Automatically select the first detected semester if any are found
-        const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
-        const targetSem = detectedSemesters.includes(semester) ? semester : (detectedSemesters[0] || semester);
-        if (detectedSemesters.length > 0 && targetSem !== semester) {
-          setSemester(targetSem);
-        }
+        // Determine the available semesters based on even/odd semester context of the new events list
+        const availableSems = getAvailableSemestersForEvents(sorted);
         
+        // Find the semesters explicitly detected in the calendar
+        const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
+        const explicitDetected = detectedSemesters.filter(s => availableSems.includes(s));
+        
+        // Target semester is the first explicit one, or the first available one (e.g. 2 for even, 1 for odd)
+        const targetSem = explicitDetected.length > 0 ? explicitDetected[0] : availableSems[0];
+        
+        setSemester(targetSem);
         setEvents(sorted);
         detectTermDates(targetSem, sorted);
         window.alert(`Success: Loaded ${parsedEvents.length} calendar events from ${file.name}`);
@@ -1008,7 +1058,7 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+              {getAvailableSemesters().map(num => (
                 <button
                   key={num}
                   onClick={() => handleSemesterSelect(num)}
