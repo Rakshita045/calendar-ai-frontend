@@ -345,27 +345,48 @@ export default function App() {
     let detectedExam1 = '';
     let detectedExam2 = '';
 
+    const isNotEndEvent = (title) => {
+      const lower = title.toLowerCase();
+      return !lower.includes('end') && 
+             !lower.includes('conclude') && 
+             !lower.includes('finish') && 
+             !lower.includes('over') && 
+             !lower.includes('last');
+    };
+
     for (const e of currentEvents) {
       const isSemMatch = e.semesters && e.semesters.includes(semVal);
       const titleLower = e.title.toLowerCase();
 
-      // Detect commencement of classes
-      if (isSemMatch && (
+      // Detect commencement of classes (earliest match)
+      if (isSemMatch && !detectedStart && (
         titleLower.includes('commencement') ||
         titleLower.includes('classes begin') ||
         titleLower.includes('teaching starts') ||
         titleLower.includes('start of classes')
-      )) {
+      ) && isNotEndEvent(e.title)) {
         detectedStart = e.date;
       }
 
-      // Detect First Mid Term Exams
-      if (isSemMatch && (titleLower.includes('first mid') || titleLower.includes('1st mid') || titleLower.includes('mid term i') || titleLower.includes('mid-term i') || titleLower.includes('midterm i'))) {
+      // Detect First Mid Term Exams (earliest match)
+      if (isSemMatch && !detectedExam1 && (
+        titleLower.includes('first mid') || 
+        titleLower.includes('1st mid') || 
+        titleLower.includes('mid term i') || 
+        titleLower.includes('mid-term i') || 
+        titleLower.includes('midterm i')
+      ) && isNotEndEvent(e.title)) {
         detectedExam1 = e.date;
       }
 
-      // Detect Second Mid Term Exams
-      if (isSemMatch && (titleLower.includes('second mid') || titleLower.includes('2nd mid') || titleLower.includes('mid term ii') || titleLower.includes('mid-term ii') || titleLower.includes('midterm ii'))) {
+      // Detect Second Mid Term Exams (earliest match)
+      if (isSemMatch && !detectedExam2 && (
+        titleLower.includes('second mid') || 
+        titleLower.includes('2nd mid') || 
+        titleLower.includes('mid term ii') || 
+        titleLower.includes('mid-term ii') || 
+        titleLower.includes('midterm ii')
+      ) && isNotEndEvent(e.title)) {
         detectedExam2 = e.date;
       }
     }
@@ -375,7 +396,8 @@ export default function App() {
       const generalCommencement = currentEvents.find(e => 
         (e.title.toLowerCase().includes('commencement') || 
         e.title.toLowerCase().includes('classes begin')) &&
-        isEventApplicableToSemester(e, semVal)
+        isEventApplicableToSemester(e, semVal) &&
+        isNotEndEvent(e.title)
       );
       if (generalCommencement) detectedStart = generalCommencement.date;
     }
@@ -383,16 +405,18 @@ export default function App() {
     // Fallbacks for Exams
     if (!detectedExam1) {
       const firstExam = currentEvents.find(e => 
-        (e.type === 'exam_1' || e.title.toLowerCase().includes('first mid')) &&
-        isEventApplicableToSemester(e, semVal)
+        (e.type === 'exam_1' || e.title.toLowerCase().includes('first mid') || e.title.toLowerCase().includes('1st mid')) &&
+        isEventApplicableToSemester(e, semVal) &&
+        isNotEndEvent(e.title)
       );
       if (firstExam) detectedExam1 = firstExam.date;
     }
 
     if (!detectedExam2) {
       const secondExam = currentEvents.find(e => 
-        (e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('theory exam') || e.type === 'exam') &&
-        isEventApplicableToSemester(e, semVal)
+        (e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('2nd mid') || e.title.toLowerCase().includes('theory exam')) &&
+        isEventApplicableToSemester(e, semVal) &&
+        isNotEndEvent(e.title)
       );
       if (secondExam) detectedExam2 = secondExam.date;
     }
@@ -445,25 +469,31 @@ export default function App() {
       return;
     }
 
-    setEvents(() => {
-      const uniqueEvents = [];
-      for (const p of parsed) {
-        if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
-          // Add custom sub-categorization for midterms inside the events list
-          const titleLower = p.title.toLowerCase();
-          let type = p.type;
-          if (titleLower.includes('first mid') || titleLower.includes('1st mid') || titleLower.includes('mid term i')) {
-            type = 'exam_1';
-          } else if (titleLower.includes('second mid') || titleLower.includes('2nd mid') || titleLower.includes('mid term ii') || titleLower.includes('theory exam')) {
-            type = 'exam_2';
-          }
-          uniqueEvents.push({ ...p, type });
+    const uniqueEvents = [];
+    for (const p of parsed) {
+      if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
+        // Add custom sub-categorization for midterms inside the events list
+        const titleLower = p.title.toLowerCase();
+        let type = p.type;
+        if (titleLower.includes('first mid') || titleLower.includes('1st mid') || titleLower.includes('mid term i')) {
+          type = 'exam_1';
+        } else if (titleLower.includes('second mid') || titleLower.includes('2nd mid') || titleLower.includes('mid term ii') || titleLower.includes('theory exam')) {
+          type = 'exam_2';
         }
+        uniqueEvents.push({ ...p, type });
       }
-      const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setTimeout(() => detectTermDates(semester, sorted), 0);
-      return sorted;
-    });
+    }
+    const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Automatically select the first detected semester if any are found
+    const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
+    const targetSem = detectedSemesters.includes(semester) ? semester : (detectedSemesters[0] || semester);
+    if (detectedSemesters.length > 0 && targetSem !== semester) {
+      setSemester(targetSem);
+    }
+    
+    setEvents(sorted);
+    detectTermDates(targetSem, sorted);
 
     setRawTextImport('');
     window.alert(`Success: Parsed and imported ${parsed.length} calendar events!`);
@@ -526,24 +556,30 @@ export default function App() {
       if (parsedEvents.length === 0) {
         window.alert("No calendar events could be parsed from this file.");
       } else {
-        setEvents(() => {
-          const uniqueEvents = [];
-          for (const p of parsedEvents) {
-            if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
-              const titleLower = p.title.toLowerCase();
-              let type = p.type;
-              if (titleLower.includes('first mid') || titleLower.includes('1st mid') || titleLower.includes('mid term i')) {
-                type = 'exam_1';
-              } else if (titleLower.includes('second mid') || titleLower.includes('2nd mid') || titleLower.includes('mid term ii') || titleLower.includes('theory exam')) {
-                type = 'exam_2';
-              }
-              uniqueEvents.push({ ...p, type });
+        const uniqueEvents = [];
+        for (const p of parsedEvents) {
+          if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
+            const titleLower = p.title.toLowerCase();
+            let type = p.type;
+            if (titleLower.includes('first mid') || titleLower.includes('1st mid') || titleLower.includes('mid term i')) {
+              type = 'exam_1';
+            } else if (titleLower.includes('second mid') || titleLower.includes('2nd mid') || titleLower.includes('mid term ii') || titleLower.includes('theory exam')) {
+              type = 'exam_2';
             }
+            uniqueEvents.push({ ...p, type });
           }
-          const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-          setTimeout(() => detectTermDates(semester, sorted), 0);
-          return sorted;
-        });
+        }
+        const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        // Automatically select the first detected semester if any are found
+        const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
+        const targetSem = detectedSemesters.includes(semester) ? semester : (detectedSemesters[0] || semester);
+        if (detectedSemesters.length > 0 && targetSem !== semester) {
+          setSemester(targetSem);
+        }
+        
+        setEvents(sorted);
+        detectTermDates(targetSem, sorted);
         window.alert(`Success: Loaded ${parsedEvents.length} calendar events from ${file.name}`);
       }
     } catch (err) {
