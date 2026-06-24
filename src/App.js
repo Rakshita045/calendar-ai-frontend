@@ -925,11 +925,11 @@ export default function App() {
       <header className="sticky top-0 z-40 backdrop-blur-md bg-slate-900/85 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-tr from-indigo-500 to-indigo-700 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-              <Icons.Calendar />
+            <div className="p-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700/60 overflow-hidden flex items-center justify-center w-11 h-11">
+              <img src="/logo192.png" alt="My Calendar Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Academic Lecture Planner</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white">My Calendar</h1>
               <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
             </div>
           </div>
