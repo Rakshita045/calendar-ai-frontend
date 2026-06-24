@@ -6,8 +6,7 @@ import {
   getDaysDifference,
   formatDate,
   calculateWorkingDates,
-  mapSyllabusToDates,
-  exportLecturePlanToCsv
+  exportWorkingDatesToCsv
 } from './utils/calendarUtils';
 
 // SVG Inline Icons
@@ -28,11 +27,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
-  BookOpen: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  ),
   Download: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -48,21 +42,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
-  Edit: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  ),
-  Alert: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  ),
-  Check: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-    </svg>
-  ),
   ChevronLeft: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -75,7 +54,7 @@ const Icons = {
   )
 };
 
-const DEFAULT_SESSION_NAME = "Term Schedule Planner";
+const DEFAULT_SESSION_NAME = "Term Working Dates Planner";
 const DEFAULT_EVENTS = [
   { id: 'ev-1', title: 'Independence Day Holiday', date: '2026-08-15', type: 'holiday', semesters: [] },
   { id: 'ev-2', title: 'Raksha Bandhan', date: '2026-08-28', type: 'holiday', semesters: [] },
@@ -83,30 +62,14 @@ const DEFAULT_EVENTS = [
   { id: 'ev-4', title: 'Gandhi Jayanti Holiday', date: '2026-10-02', type: 'holiday', semesters: [] },
   { id: 'ev-7', title: 'End Semester Exams Begin', date: '2026-11-23', type: 'exam', semesters: [] }
 ];
-const DEFAULT_COURSES = [
-  {
-    id: 'c-1',
-    name: 'CS-401: Distributed Systems',
-    classDays: [1, 3, 5],
-    topics: [
-      { id: 't-1', name: 'Introduction to Distributed Systems: Definitions & Goals', notes: 'Prepare slides' },
-      { id: 't-2', name: 'Hardware & Software Architectural Models', notes: '' },
-      { id: 't-3', name: 'Networking Principles and Transport Protocols', notes: '' },
-      { id: 't-4', name: 'Interprocess Communication: Sockets & Datagrams', notes: 'Lab activity 1 setup' },
-      { id: 't-5', name: 'Remote Invocation: RPC & RMI paradigms', notes: '' },
-      { id: 't-6', name: 'Distributed File Systems: NFS and HDFS', notes: '' },
-      { id: 't-7', name: 'Time Synchronization: Logical Clocks & Vector Clocks', notes: '' }
-    ]
-  }
-];
 
 export default function App() {
   // Wizard Steps:
   // 1: Upload / Paste Calendar
   // 2: Choose Semester (runs auto-detection)
   // 3: Exam End Date Parameters
-  // 4: Configure Course Details
-  // 5: Lecture Planning Dashboard (Calendar, Syllabus, Export)
+  // 4: Configure Class Days
+  // 5: Working Dates Dashboard
   const [currentStep, setCurrentStep] = useState(1);
 
   // Session State
@@ -122,18 +85,29 @@ export default function App() {
   const [examEndDate, setExamEndDate] = useState('2026-12-02');
   const [examInputMode, setExamInputMode] = useState('duration');
 
-  // Events & Courses Lists
+  // Weekdays Schedule: Monday, Wednesday, Friday default
+  const [classDays, setClassDays] = useState([1, 3, 5]);
+
+  // General Calendar Events
   const [events, setEvents] = useState(DEFAULT_EVENTS);
-  const [courses, setCourses] = useState(DEFAULT_COURSES);
-  const [activeCourseId, setActiveCourseId] = useState('c-1');
+
+  // Legend checkboxes count toggle state
+  const [showCounts, setShowCounts] = useState({
+    lectures: false,
+    holidays: false,
+    exams: false,
+    weekends: false,
+    cancelled: false
+  });
 
   // Auto-detection results feedback state
   const [detectedStartFeedback, setDetectedStartFeedback] = useState(null);
   const [detectedExamFeedback, setDetectedExamFeedback] = useState(null);
 
-  // Interactive Calendar month view navigation
+  // Interactive Calendar month navigation
   const [calendarMonth, setCalendarMonth] = useState(new Date('2026-08-01'));
   
+  // UI states
   const [loading, setLoading] = useState(false);
   const [rawTextImport, setRawTextImport] = useState('');
   const [calendarPopupDate, setCalendarPopupDate] = useState(null);
@@ -166,9 +140,8 @@ export default function App() {
         examDuration: 10,
         examEndDate: '2026-12-02',
         examInputMode: 'duration',
+        classDays: [1, 3, 5],
         events: DEFAULT_EVENTS,
-        courses: DEFAULT_COURSES,
-        activeCourseId: 'c-1',
         currentStep: 1
       });
     }
@@ -186,15 +159,14 @@ export default function App() {
       examDuration,
       examEndDate,
       examInputMode,
+      classDays,
       events,
-      courses,
-      activeCourseId,
       currentStep
     });
   }, [
     currentSessionId, sessionName, semester, semesterStartDate,
     examStartDate, examDuration, examEndDate, examInputMode,
-    events, courses, activeCourseId, currentStep
+    classDays, events, currentStep
   ]);
 
   // Sync Exam Dates double-binding
@@ -249,9 +221,8 @@ export default function App() {
       setExamDuration(data.examDuration || 10);
       setExamEndDate(data.examEndDate || '2026-12-02');
       setExamInputMode(data.examInputMode || 'duration');
+      setClassDays(data.classDays || [1, 3, 5]);
       setEvents(data.events || []);
-      setCourses(data.courses || []);
-      setActiveCourseId(data.activeCourseId || (data.courses[0] && data.courses[0].id) || '');
       setCurrentStep(data.currentStep || 1);
       localStorage.setItem('academic_active_session_id', id);
 
@@ -283,9 +254,8 @@ export default function App() {
       examDuration: 10,
       examEndDate: addDays(formatDate(new Date()), 99),
       examInputMode: 'duration',
+      classDays: [1, 3, 5],
       events: [],
-      courses: [],
-      activeCourseId: '',
       currentStep: 1
     };
     
@@ -295,9 +265,8 @@ export default function App() {
     setExamDuration(freshState.examDuration);
     setExamEndDate(freshState.examEndDate);
     setExamInputMode(freshState.examInputMode);
+    setClassDays(freshState.classDays);
     setEvents([]);
-    setCourses([]);
-    setActiveCourseId('');
     
     saveSessionData(newId, freshState);
   };
@@ -322,8 +291,6 @@ export default function App() {
     }
   };
 
-
-
   // Heuristics date auto-detector based on semester selection
   const handleSemesterSelect = (semVal) => {
     setSemester(semVal);
@@ -331,7 +298,6 @@ export default function App() {
     let detectedStart = '';
     let detectedExam = '';
 
-    // Search events list for commencement of classes or exam starts for this semester
     for (const e of events) {
       const isSemMatch = e.semesters && e.semesters.includes(semVal);
       const titleLower = e.title.toLowerCase();
@@ -492,118 +458,25 @@ export default function App() {
     }
   };
 
-
-
-  // Course configuration handlers
-  const handleAddCourse = (name) => {
-    if (!name || !name.trim()) return;
-    const newCourse = {
-      id: 'c-' + Date.now(),
-      name: name.trim(),
-      classDays: [1, 3, 5], // default Mon, Wed, Fri
-      topics: []
-    };
-    setCourses(prev => [...prev, newCourse]);
-    setActiveCourseId(newCourse.id);
-  };
-
-  const handleDeleteCourse = (id) => {
-    if (!window.confirm("Are you sure you want to delete this course and all its syllabus topics?")) {
-      return;
-    }
-    const updatedCourses = courses.filter(c => c.id !== id);
-    setCourses(updatedCourses);
-    if (activeCourseId === id) {
-      setActiveCourseId(updatedCourses[0]?.id || '');
-    }
-  };
-
-  const handleToggleCourseDay = (courseId, dayIndex) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      const alreadyHas = c.classDays.includes(dayIndex);
-      return {
-        ...c,
-        classDays: alreadyHas 
-          ? c.classDays.filter(d => d !== dayIndex) 
-          : [...c.classDays, dayIndex].sort()
-      };
-    }));
-  };
-
-  // Syllabus topics
-  const handleBulkTopicsImport = (courseId, text) => {
-    if (!text.trim()) return;
-    const newTopics = text.split(/\n/).map(line => line.trim()).filter(Boolean).map(name => ({
-      id: 'topic-' + Math.random().toString(36).substr(2, 9),
-      name: name,
-      notes: ''
-    }));
-
-    setCourses(prev => prev.map(c => 
-      c.id === courseId 
-        ? { ...c, topics: [...c.topics, ...newTopics] }
-        : c
-    ));
-  };
-
-  const handleClearTopics = (courseId) => {
-    if (window.confirm("Clear all syllabus topics for this course?")) {
-      setCourses(prev => prev.map(c => 
-        c.id === courseId ? { ...c, topics: [] } : c
-      ));
-    }
-  };
-
-  const handleUpdateTopicField = (courseId, topicId, field, value) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        topics: c.topics.map(t => t.id === topicId ? { ...t, [field]: value } : t)
-      };
-    }));
-  };
-
-  const handleRemoveTopic = (courseId, topicId) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        topics: c.topics.filter(t => t.id !== topicId)
-      };
-    }));
-  };
-
-  const handleAddSingleTopic = (courseId) => {
-    const name = window.prompt("Enter Topic name:");
-    if (!name || !name.trim()) return;
-
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        topics: [...c.topics, {
-          id: 'topic-' + Math.random().toString(36).substr(2, 9),
-          name: name.trim(),
-          notes: ''
-        }]
-      };
-    }));
+  const handleToggleCourseDay = (dayIndex) => {
+    const alreadyHas = classDays.includes(dayIndex);
+    setClassDays(alreadyHas 
+      ? classDays.filter(d => d !== dayIndex) 
+      : [...classDays, dayIndex].sort()
+    );
   };
 
   // Overrides modal action
   const handleOpenDayDialog = (dateStr) => {
     const dayOfWeek = new Date(dateStr).getDay();
-    const activeCourse = courses.find(c => c.id === activeCourseId);
-    const isNormalClassDay = activeCourse ? activeCourse.classDays.includes(dayOfWeek) : false;
+    const isNormalClassDay = classDays.includes(dayOfWeek);
     const isSemesterWorking = (semester >= 1 && semester <= 6) 
       ? (dayOfWeek >= 1 && dayOfWeek <= 5)
       : (dayOfWeek >= 1 && dayOfWeek <= 3);
 
     const dayEvents = events.filter(e => e.date === dateStr);
-    const cancelEv = dayEvents.find(e => e.type === 'cancel_class' && e.courseId === activeCourseId);
-    const extraEv = dayEvents.find(e => e.type === 'extra_class' && e.courseId === activeCourseId);
+    const cancelEv = dayEvents.find(e => e.type === 'cancel_class');
+    const extraEv = dayEvents.find(e => e.type === 'extra_class');
     const holEv = dayEvents.find(e => e.type === 'holiday');
 
     let initialType = 'holiday';
@@ -618,7 +491,7 @@ export default function App() {
       title: holEv ? holEv.title : (cancelEv ? 'Lecture Cancelled' : 'Extra Session'),
       type: holEv ? 'holiday' : initialType,
       semesterSpec: 'all',
-      customCourseId: activeCourseId
+      customCourseId: ''
     });
   };
 
@@ -629,7 +502,7 @@ export default function App() {
     setEvents(prev => {
       let filtered = prev.filter(e => {
         if (e.date === dateStr && e.type === 'holiday' && type !== 'holiday') return false;
-        if (e.date === dateStr && (e.type === 'cancel_class' || e.type === 'extra_class') && e.courseId === activeCourseId) return false;
+        if (e.date === dateStr && (e.type === 'cancel_class' || e.type === 'extra_class')) return false;
         return true;
       });
 
@@ -647,7 +520,6 @@ export default function App() {
           title: title || 'Cancelled Lecture',
           date: dateStr,
           type: 'cancel_class',
-          courseId: activeCourseId,
           semesters: [semester]
         });
       } else if (type === 'extra_class') {
@@ -656,7 +528,6 @@ export default function App() {
           title: title || 'Extra Lecture Session',
           date: dateStr,
           type: 'extra_class',
-          courseId: activeCourseId,
           semesters: [semester]
         });
       }
@@ -666,9 +537,6 @@ export default function App() {
   };
 
   // Calculations
-  const activeCourse = courses.find(c => c.id === activeCourseId);
-  const classDays = activeCourse ? activeCourse.classDays : [];
-  
   const calculatedClassDates = calculateWorkingDates({
     semester,
     semesterStartDate,
@@ -676,16 +544,60 @@ export default function App() {
     examEndDate,
     events,
     courseClassDays: classDays,
-    courseId: activeCourseId
+    courseId: ''
   });
 
-  const syllabusTopics = activeCourse ? activeCourse.topics : [];
-  const mappedLectures = mapSyllabusToDates(calculatedClassDates, syllabusTopics);
-  const unmappedTopics = syllabusTopics.slice(calculatedClassDates.length);
+  // Calculate detailed counts of all types during the active term range
+  let lecturesCount = calculatedClassDates.length;
+  let holidaysCount = 0;
+  let examsCount = 0;
+  let weekendsCount = 0;
+  let cancelledCount = 0;
 
+  const startRange = new Date(semesterStartDate);
+  const endRange = new Date(examEndDate);
+  
+  if (startRange <= endRange) {
+    const tempDate = new Date(startRange);
+    while (tempDate <= endRange) {
+      const dateStr = formatDate(tempDate);
+      const dayOfWeek = tempDate.getDay();
+      
+      const isExam = dateStr >= examStartDate && dateStr <= examEndDate;
+      const dayEvents = events.filter(e => e.date === dateStr);
+      
+      const isHoliday = dayEvents.some(e => 
+        e.type === 'holiday' && (e.semesters.length === 0 || e.semesters.includes(semester))
+      );
+      const isCancelled = dayEvents.some(e => e.type === 'cancel_class');
+      const isExtra = dayEvents.some(e => e.type === 'extra_class');
 
+      let isSemWorking = false;
+      if (semester >= 1 && semester <= 6) {
+        isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 5;
+      } else if (semester === 7 || semester === 8) {
+        isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 3;
+      }
 
-  // Calendar renderers
+      const isCourseDay = classDays.includes(dayOfWeek);
+
+      if (isExam) {
+        examsCount++;
+      } else if (isHoliday) {
+        holidaysCount++;
+      } else if (isCancelled) {
+        cancelledCount++;
+      } else if (isExtra || (isSemWorking && isCourseDay)) {
+        // Handled in lecturesCount
+      } else {
+        weekendsCount++;
+      }
+
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+  }
+
+  // Calendar month navigation
   const handlePrevMonth = () => {
     setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
   };
@@ -700,9 +612,9 @@ export default function App() {
     const totalDays = new Date(year, month + 1, 0).getDate();
 
     const mappedLecturesByDate = {};
-    for (const lec of mappedLectures) {
-      mappedLecturesByDate[lec.date] = lec;
-    }
+    calculatedClassDates.forEach((wd, index) => {
+      mappedLecturesByDate[wd.date] = { ...wd, lectureNumber: index + 1 };
+    });
 
     const eventsByDate = {};
     for (const ev of events) {
@@ -748,8 +660,8 @@ export default function App() {
         textClass = "text-indigo-300 font-black";
         indicator = (
           <div className="mt-1">
-            <div className="text-[10px] bg-indigo-600 text-white rounded px-1 py-0.5 truncate font-semibold" title={lec.topicName}>
-              #{lec.lectureNumber} {lec.topicName}
+            <div className="text-[10px] bg-indigo-600 text-white rounded px-1 py-0.5 truncate font-semibold">
+              Lecture #{lec.lectureNumber}
             </div>
             {lec.isExtra && <span className="text-[8px] bg-emerald-950 text-emerald-400 rounded px-1 py-0.2 mt-0.5 inline-block font-semibold">Extra</span>}
           </div>
@@ -764,7 +676,7 @@ export default function App() {
         indicator = <div className="text-[9px] text-slate-500 mt-1">No Lecture</div>;
       }
 
-      const isCancelled = events.some(e => e.date === dateStr && e.type === 'cancel_class' && e.courseId === activeCourseId);
+      const isCancelled = events.some(e => e.date === dateStr && e.type === 'cancel_class');
       if (isCancelled) {
         cellClass = "bg-slate-850 border-slate-800 line-through opacity-50";
         textClass = "text-slate-500";
@@ -800,7 +712,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-12">
-      {/* Top Header */}
+      {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-slate-900/85 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
@@ -809,7 +721,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">Academic Lecture Planner</h1>
-              <p className="text-xs text-slate-400">Step-by-Step Scheduling and Syllabus Auto-Mapping</p>
+              <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
             </div>
           </div>
 
@@ -818,7 +730,7 @@ export default function App() {
             <select
               value={currentSessionId}
               onChange={(e) => loadSession(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs outline-none"
+              className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs outline-none font-semibold"
             >
               {sessions.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -851,7 +763,7 @@ export default function App() {
           <span className="text-slate-700">➔</span>
           <span className={`px-2.5 py-1 rounded-lg ${currentStep === 3 ? 'bg-indigo-650 text-white font-bold' : ''}`}>3. Exams End Date</span>
           <span className="text-slate-700">➔</span>
-          <span className={`px-2.5 py-1 rounded-lg ${currentStep === 4 ? 'bg-indigo-650 text-white font-bold' : ''}`}>4. Course Setup</span>
+          <span className={`px-2.5 py-1 rounded-lg ${currentStep === 4 ? 'bg-indigo-650 text-white font-bold' : ''}`}>4. Class Days</span>
           <span className="text-slate-700">➔</span>
           <span className={`px-2.5 py-1 rounded-lg ${currentStep === 5 ? 'bg-indigo-650 text-white font-bold' : ''}`}>5. Schedule Results</span>
         </div>
@@ -935,7 +847,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* Display Feedback messages from Auto-Detection */}
             <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 text-xs space-y-3 text-slate-350">
               <span className="block font-bold text-slate-400 uppercase tracking-wider mb-1">Auto-Detection Summary</span>
               
@@ -1087,97 +998,49 @@ export default function App() {
           </div>
         )}
 
-        {/* STEP 4: Configure Course Details */}
+        {/* STEP 4: Configure Class Days */}
         {currentStep === 4 && (
           <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-lg font-bold text-white">Step 4: Configure Course & Teaching Days</h2>
-              <p className="text-xs text-slate-400">Set the name of the subject you teach and select which weekdays you take this class.</p>
+              <h2 className="text-lg font-bold text-white">Step 4: Select weekly teaching weekdays</h2>
+              <p className="text-xs text-slate-400">Select which weekdays you are scheduled to take lectures. We will match this with the working rules of the semester.</p>
             </div>
 
-            {courses.length === 0 ? (
-              <div className="space-y-4">
-                <label className="text-xs font-semibold text-slate-400 block">Course Name:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. CS-401: Distributed Systems"
-                  id="newCourseNameInput"
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:border-indigo-500 outline-none"
-                />
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('newCourseNameInput');
-                    if (el && el.value.trim()) {
-                      handleAddCourse(el.value);
-                    }
-                  }}
-                  className="w-full bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2.5 rounded-lg text-xs"
-                >
-                  Create Course Profile
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-slate-900/50 p-4 border border-slate-750 rounded-xl space-y-3">
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span className="font-bold text-slate-200 text-xs">{activeCourse?.name}</span>
-                    <button
-                      onClick={() => handleDeleteCourse(activeCourseId)}
-                      className="text-rose-500 hover:text-rose-400 text-[10px] font-bold"
-                    >
-                      Delete
-                    </button>
-                  </div>
+            <div className="bg-slate-900/50 p-5 border border-slate-750 rounded-xl space-y-4">
+              <div>
+                <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
+                <div className="flex flex-wrap gap-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
+                    const isSelected = classDays.includes(idx);
+                    const isCollegeWorking = (semester >= 1 && semester <= 6)
+                      ? (idx >= 1 && idx <= 5)
+                      : (idx >= 1 && idx <= 3);
 
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
-                        const isSelected = classDays.includes(idx);
-                        const isCollegeWorking = (semester >= 1 && semester <= 6)
-                          ? (idx >= 1 && idx <= 5)
-                          : (idx >= 1 && idx <= 3);
-
-                        return (
-                          <button
-                            key={day}
-                            onClick={() => handleToggleCourseDay(activeCourseId, idx)}
-                            className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition-all relative ${
-                              isSelected
-                                ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
-                                : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-855'
-                            } ${!isCollegeWorking && isSelected ? 'ring-2 ring-rose-500/50' : ''}`}
-                          >
-                            {day}
-                            {!isCollegeWorking && isSelected && (
-                              <span className="absolute -top-1.5 -right-1 text-[8px] bg-rose-600 text-white rounded px-0.8 font-bold border border-slate-900" title="Non-working college day for this semester!">
-                                !
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <span className="text-[10px] text-slate-500 block mt-2">
-                      ⚠️ Note: Weekdays marked with an exclamation (!) are off-days according to the college semester rule.
-                    </span>
-                  </div>
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => handleToggleCourseDay(idx)}
+                        className={`py-2.5 px-4 rounded-lg border text-xs font-bold transition-all relative ${
+                          isSelected
+                            ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
+                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                        } ${!isCollegeWorking && isSelected ? 'ring-2 ring-rose-500/50' : ''}`}
+                      >
+                        {day}
+                        {!isCollegeWorking && isSelected && (
+                          <span className="absolute -top-1.5 -right-1 text-[8px] bg-rose-600 text-white rounded px-0.8 font-bold border border-slate-900" title="Non-working college day for this semester!">
+                            !
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-
-                <div className="text-center pt-2">
-                  <span className="text-[11px] text-slate-500">Need to add another course?</span>
-                  <button
-                    onClick={() => {
-                      const name = window.prompt("Enter Course Name:");
-                      if (name) handleAddCourse(name);
-                    }}
-                    className="text-xs text-indigo-400 font-bold ml-1.5 hover:underline"
-                  >
-                    + Add More Courses
-                  </button>
-                </div>
+                <span className="text-[10px] text-slate-500 block mt-2 leading-relaxed">
+                  ⚠️ Note: Weekdays marked with an exclamation (!) fall outside the standard college working days for Sem {semester} (Sem 1-6 are Mon-Fri, Sem 7-8 are Mon-Wed).
+                </span>
               </div>
-            )}
+            </div>
 
             <div className="flex justify-between items-center pt-2">
               <button
@@ -1188,143 +1051,108 @@ export default function App() {
               </button>
               <button
                 onClick={() => setCurrentStep(5)}
-                disabled={courses.length === 0}
+                disabled={classDays.length === 0}
                 className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40"
               >
-                Plan Lecture Schedule <Icons.ChevronRight />
+                Calculate Schedule <Icons.ChevronRight />
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 5: Final Lecture Planner Dashboard */}
+        {/* STEP 5: Final Working Dates Dashboard */}
         {currentStep === 5 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
             
-            {/* Left Hand: Syllabus topics & mapped lectures list */}
+            {/* Left Hand: Calculated working dates list */}
             <div className="lg:col-span-1 space-y-6">
               
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Courses Setup</h3>
-                  <button
-                    onClick={() => setCurrentStep(4)}
-                    className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold"
-                  >
-                    ⚙️ Manage Courses
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Course Plan:</label>
-                  <select
-                    value={activeCourseId}
-                    onChange={(e) => setActiveCourseId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-white font-bold text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {courses.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-slate-750 grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-900/50 p-2.5 rounded-lg text-center border border-slate-800">
-                    <span className="text-lg font-bold text-indigo-400">{calculatedClassDates.length}</span>
-                    <span className="text-[9px] text-slate-500 block uppercase font-bold mt-0.5">Available Dates</span>
-                  </div>
-                  <div className="bg-slate-900/50 p-2.5 rounded-lg text-center border border-slate-800">
-                    <span className="text-lg font-bold text-slate-200">{syllabusTopics.length}</span>
-                    <span className="text-[9px] text-slate-500 block uppercase font-bold mt-0.5">Topics Count</span>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => exportLecturePlanToCsv(activeCourse?.name || 'Course', semester, mappedLectures, unmappedTopics)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow shadow-emerald-600/10"
-                  >
-                    <Icons.Download /> Export Plan (CSV)
-                  </button>
-                </div>
-              </div>
-
-              {/* Syllabus bulk loader card */}
               <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Import Syllabus List</h4>
-                  <p className="text-[10px] text-slate-500">Type or paste your topics list (one per line):</p>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan Summary</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Calculated schedule parameters</p>
                 </div>
 
-                <div className="space-y-2">
-                  <textarea
-                    rows={4}
-                    id="bulkTopicsInput"
-                    placeholder="e.g.&#10;Lecture 1: Introduction&#10;Lecture 2: DFA definition"
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-xs outline-none focus:border-indigo-500 font-mono"
-                  ></textarea>
+                <div className="bg-slate-900/50 p-4 border border-slate-750 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Target Semester:</span>
+                    <span className="font-semibold text-slate-200">Sem {semester}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Class Weekdays:</span>
+                    <span className="font-semibold text-slate-200">
+                      {classDays.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Teaching Dates:</span>
+                    <span className="font-bold text-indigo-400">{calculatedClassDates.length} Classes</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => exportWorkingDatesToCsv(semester, calculatedClassDates)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow shadow-emerald-600/10"
+                >
+                  <Icons.Download /> Export Dates (CSV)
+                </button>
+
+                <div className="pt-2 text-center border-t border-slate-750">
                   <button
-                    onClick={() => {
-                      const el = document.getElementById('bulkTopicsInput');
-                      if (el && el.value) {
-                        handleBulkTopicsImport(activeCourseId, el.value);
-                        el.value = '';
-                      }
-                    }}
-                    className="w-full bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs"
+                    onClick={() => setCurrentStep(2)}
+                    className="text-xs text-indigo-400 hover:underline font-bold"
                   >
-                    Add Topics to Syllabus
+                    ⏪ Change Parameters
                   </button>
                 </div>
               </div>
 
-              {/* Adjust settings floating navigator */}
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 text-center">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="text-xs text-indigo-400 hover:underline font-bold"
-                >
-                  ⏪ Adjust Semester Start or Holiday Settings
-                </button>
+              {/* Working Dates Table List */}
+              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scheduled Working Dates</h4>
+                
+                <div className="overflow-x-auto max-h-[400px] border border-slate-750 rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-900 border-b border-slate-750 text-slate-400 uppercase font-bold tracking-wider">
+                        <th className="p-3 w-16 text-center">Lec #</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3 w-28">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {calculatedClassDates.map((wd, index) => (
+                        <tr key={index} className={`hover:bg-slate-800/30 transition-colors ${wd.isExtra ? 'bg-emerald-950/20' : ''}`}>
+                          <td className="p-3 font-bold text-center text-slate-500">{index + 1}</td>
+                          <td className="p-3 whitespace-nowrap">
+                            <span className="font-semibold text-slate-200">{wd.date}</span>
+                            <span className="text-[10px] text-slate-500 block">{wd.dayName}</span>
+                          </td>
+                          <td className="p-3">
+                            {wd.eventName ? (
+                              <span className="text-[10px] text-indigo-400 font-semibold">{wd.eventName}</span>
+                            ) : (
+                              <span className="text-slate-400">{wd.isExtra ? 'Extra Override' : 'Scheduled Class'}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
             </div>
 
-            {/* Right Hand: Schedule Results & visual calendar */}
+            {/* Right Hand: Visual calendar with legend checkboxes */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* Warning/Info headers */}
-              {syllabusTopics.length > calculatedClassDates.length && (
-                <div className="bg-rose-900/30 border border-rose-800 text-rose-200 p-4 rounded-2xl text-xs flex items-start gap-2 animate-bounceFast">
-                  <div className="mt-0.5"><Icons.Alert /></div>
-                  <div>
-                    <span className="font-bold">Syllabus Overflow Warning:</span> You have{' '}
-                    <span className="font-bold">{syllabusTopics.length}</span> topics, but only{' '}
-                    <span className="font-bold">{calculatedClassDates.length}</span> working class dates available.
-                    The last <span className="font-bold">{syllabusTopics.length - calculatedClassDates.length}</span> topics are currently unmapped!
-                    Add extra class sessions or toggle additional weekdays.
-                  </div>
-                </div>
-              )}
-
-              {syllabusTopics.length > 0 && syllabusTopics.length < calculatedClassDates.length && (
-                <div className="bg-blue-900/20 border border-blue-800 text-blue-200 p-4 rounded-2xl text-xs flex items-start gap-2">
-                  <div className="mt-0.5"><Icons.Alert /></div>
-                  <div>
-                    <span className="font-bold">Buffer Slots Available:</span> You have{' '}
-                    <span className="font-bold">{syllabusTopics.length}</span> topics and{' '}
-                    <span className="font-bold">{calculatedClassDates.length}</span> teaching dates.
-                    The remaining <span className="font-bold">{calculatedClassDates.length - syllabusTopics.length}</span> dates are designated as buffer/revision slots.
-                  </div>
-                </div>
-              )}
-
-              {/* Visual Calendar Component */}
+              {/* Visual Calendar */}
               <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h3 className="text-md font-bold text-white">Visual Lecture Calendar</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Circles indicate teaching class dates for {activeCourse?.name}</p>
+                    <h3 className="text-md font-bold text-white">Visual Working Calendar</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Circles indicate teaching class dates. Click any day to toggle overrides.</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button onClick={handlePrevMonth} className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 rounded-lg">
@@ -1341,99 +1169,65 @@ export default function App() {
 
                 {renderInteractiveCalendar()}
 
-                <div className="flex flex-wrap gap-4 mt-6 text-xs border-t border-slate-700/60 pt-4 text-slate-500">
-                  <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-indigo-600/25 border-indigo-500 border-2 rounded"></span><span>Circled Lecture</span></div>
-                  <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-rose-500/10 border-rose-500/40 border rounded"></span><span>Holiday</span></div>
-                  <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-amber-500/10 border-amber-500/40 border rounded"></span><span>Exams</span></div>
-                  <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-slate-900 border-slate-800 border rounded"></span><span>Weekend Off</span></div>
-                  <div className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 bg-slate-850 line-through border border-slate-800 rounded"></span><span>Cancelled Class</span></div>
-                </div>
-              </div>
+                {/* Legend Checkboxes (If selected, shows count) */}
+                <div className="flex flex-wrap gap-4 mt-6 text-xs border-t border-slate-700/60 pt-4 text-slate-400 select-none">
+                  
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={showCounts.lectures}
+                      onChange={(e) => setShowCounts({ ...showCounts, lectures: e.target.checked })}
+                      className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="w-3.5 h-3.5 bg-indigo-650 border-indigo-500 border-2 rounded"></span>
+                    <span>Circled Lecture {showCounts.lectures && <strong className="text-indigo-400">({lecturesCount})</strong>}</span>
+                  </label>
 
-              {/* Day-by-Day Lecture Plan Grid */}
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Day-by-Day Mapping List</h4>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleAddSingleTopic(activeCourseId)} className="text-[10px] text-indigo-400 font-bold border border-slate-700 rounded px-2 py-1 bg-slate-900/40">+ Add Topic</button>
-                    <button onClick={() => handleClearTopics(activeCourseId)} className="text-[10px] text-rose-400 font-bold border border-slate-700 rounded px-2 py-1 bg-slate-900/40">Clear Topics</button>
-                  </div>
-                </div>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={showCounts.holidays}
+                      onChange={(e) => setShowCounts({ ...showCounts, holidays: e.target.checked })}
+                      className="rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-rose-500"
+                    />
+                    <span className="w-3.5 h-3.5 bg-rose-500/10 border-rose-500/40 border rounded"></span>
+                    <span>Holiday {showCounts.holidays && <strong className="text-rose-400">({holidaysCount})</strong>}</span>
+                  </label>
 
-                <div className="overflow-x-auto border border-slate-750 rounded-xl">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-900 border-b border-slate-750 text-slate-400 uppercase font-bold tracking-wider">
-                        <th className="p-3 w-16 text-center">Lec #</th>
-                        <th className="p-3 w-28">Date</th>
-                        <th className="p-3">Topic / syllabus Content</th>
-                        <th className="p-3 w-40">Notes / Tasks</th>
-                        <th className="p-3 w-10 text-center">Del</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {mappedLectures.map(lec => (
-                        <tr key={lec.lectureNumber} className={`hover:bg-slate-800/30 transition-colors ${lec.isExtra ? 'bg-emerald-950/20' : ''}`}>
-                          <td className="p-3 font-bold text-center text-slate-500">{lec.lectureNumber}</td>
-                          <td className="p-3 whitespace-nowrap">
-                            <span className="font-semibold text-slate-200">{lec.date}</span>
-                            <span className="text-[10px] text-slate-500 block">{lec.dayName}</span>
-                          </td>
-                          <td className="p-3">
-                            {lec.topicId ? (
-                              <input
-                                type="text"
-                                value={lec.topicName}
-                                onChange={(e) => handleUpdateTopicField(activeCourseId, lec.topicId, 'name', e.target.value)}
-                                className="w-full bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 py-1 outline-none text-slate-200"
-                              />
-                            ) : (
-                              <span className="text-slate-500 italic">{lec.topicName}</span>
-                            )}
-                            {lec.eventName && (
-                              <span className="text-[9px] text-indigo-400 block font-semibold">⚡ Event: {lec.eventName}</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            {lec.topicId ? (
-                              <input
-                                type="text"
-                                value={lec.notes}
-                                onChange={(e) => handleUpdateTopicField(activeCourseId, lec.topicId, 'notes', e.target.value)}
-                                placeholder="Slides checklist..."
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 outline-none focus:border-indigo-500 text-slate-350"
-                              />
-                            ) : (
-                              <span className="text-slate-600">-</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {lec.topicId ? (
-                              <button onClick={() => handleRemoveTopic(activeCourseId, lec.topicId)} className="text-rose-500 hover:text-rose-400"><Icons.Trash /></button>
-                            ) : (
-                              <span className="text-slate-655">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={showCounts.exams}
+                      onChange={(e) => setShowCounts({ ...showCounts, exams: e.target.checked })}
+                      className="rounded bg-slate-900 border-slate-700 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="w-3.5 h-3.5 bg-amber-500/10 border-amber-500/40 border rounded"></span>
+                    <span>Exams {showCounts.exams && <strong className="text-amber-400">({examsCount})</strong>}</span>
+                  </label>
 
-                {/* Unmapped list */}
-                {unmappedTopics.length > 0 && (
-                  <div className="mt-4 border border-rose-900/40 rounded-xl p-4 bg-rose-950/10">
-                    <h5 className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2">Unmapped Syllabus (Need class slots)</h5>
-                    <ul className="list-disc pl-5 text-xs text-rose-300 space-y-1">
-                      {unmappedTopics.map(t => (
-                        <li key={t.id} className="flex justify-between items-center">
-                          <span>{t.name}</span>
-                          <button onClick={() => handleRemoveTopic(activeCourseId, t.id)} className="text-rose-500 hover:text-rose-400"><Icons.Trash /></button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={showCounts.weekends}
+                      onChange={(e) => setShowCounts({ ...showCounts, weekends: e.target.checked })}
+                      className="rounded bg-slate-900 border-slate-700 text-slate-500 focus:ring-slate-500"
+                    />
+                    <span className="w-3.5 h-3.5 bg-slate-900 border border-slate-800 rounded"></span>
+                    <span>Weekend Off {showCounts.weekends && <strong className="text-slate-400">({weekendsCount})</strong>}</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={showCounts.cancelled}
+                      onChange={(e) => setShowCounts({ ...showCounts, cancelled: e.target.checked })}
+                      className="rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-red-500"
+                    />
+                    <span className="w-3.5 h-3.5 bg-slate-850 line-through border border-slate-800 rounded"></span>
+                    <span>Cancelled Class {showCounts.cancelled && <strong className="text-red-400">({cancelledCount})</strong>}</span>
+                  </label>
+
+                </div>
               </div>
 
             </div>
@@ -1473,7 +1267,7 @@ export default function App() {
                     type="text"
                     value={calendarPopupForm.title}
                     onChange={(e) => setCalendarPopupForm({ ...calendarPopupForm, title: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                    className="w-full bg-slate-900 border border-slate-750 text-white rounded-lg px-3 py-2 text-xs outline-none"
                     placeholder="e.g. Festival, Make-up session, etc."
                   />
                 </div>

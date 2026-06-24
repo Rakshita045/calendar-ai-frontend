@@ -147,61 +147,30 @@ export function calculateWorkingDates({
 }
 
 /**
- * Distributes syllabus topics across calculated working dates
+ * Exports the calculated working dates to CSV format and triggers browser download
  */
-export function mapSyllabusToDates(workingDates, topics) {
-  return workingDates.map((wd, index) => {
-    const topic = topics[index] || null;
-    return {
-      lectureNumber: index + 1,
-      date: wd.date,
-      dayName: wd.dayName,
-      isExtra: wd.isExtra,
-      eventName: wd.eventName,
-      topicId: topic ? topic.id : null,
-      topicName: topic ? topic.name : 'Unassigned / Buffer Class',
-      notes: topic ? (topic.notes || '') : ''
-    };
-  });
-}
-
-/**
- * Exports the structured lecture plan to CSV format and triggers browser download
- */
-export function exportLecturePlanToCsv(courseName, semester, mappedLectures, unmappedTopics = []) {
+export function exportWorkingDatesToCsv(semester, workingDates) {
   const csvRows = [];
   
   // Title / Metadata header
-  csvRows.push(`"Academic Lecture Plan - ${courseName}"`);
-  csvRows.push(`"Semester",${semester}`);
+  csvRows.push(`"Academic Working Dates - Semester ${semester}"`);
   csvRows.push(`"Generated Date","${new Date().toLocaleDateString()}"`);
   csvRows.push(''); // Empty spacer line
 
   // Column Headers
-  csvRows.push('"Lecture #","Date","Day","Topic / Lecture Content","Special Events / Holidays","Notes / Tasks"');
+  csvRows.push('"Lecture #","Date","Day of Week","Details"');
 
-  // Main Lecture schedule
-  for (const lecture of mappedLectures) {
+  // Main Working dates schedule
+  workingDates.forEach((wd, index) => {
+    const detailText = wd.eventName || (wd.isExtra ? 'Extra Class Override' : 'Regular Scheduled Class');
     const row = [
-      lecture.lectureNumber,
-      lecture.date,
-      lecture.dayName,
-      `"${lecture.topicName.replace(/"/g, '""')}"`,
-      `"${(lecture.eventName || (lecture.isExtra ? 'Extra Class' : '')).replace(/"/g, '""')}"`,
-      `"${(lecture.notes || '').replace(/"/g, '""')}"`
+      index + 1,
+      wd.date,
+      wd.dayName,
+      `"${detailText.replace(/"/g, '""')}"`
     ];
     csvRows.push(row.join(','));
-  }
-
-  // Append unmapped topics at the bottom if any exist
-  if (unmappedTopics.length > 0) {
-    csvRows.push('');
-    csvRows.push('"UNMAPPED SYLLABUS TOPICS (Not enough working class dates)"');
-    csvRows.push('"Topic Name","Status"');
-    for (const t of unmappedTopics) {
-      csvRows.push(`"${t.name.replace(/"/g, '""')}","Unscheduled"`);
-    }
-  }
+  });
 
   // Create Blob and trigger download
   const csvContent = "\uFEFF" + csvRows.join("\n"); // add BOM for Excel UTF-8 compliance
@@ -209,7 +178,7 @@ export function exportLecturePlanToCsv(courseName, semester, mappedLectures, unm
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   
-  const sanitizedFilename = `lecture_plan_${courseName.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv`;
+  const sanitizedFilename = `working_dates_sem_${semester}.csv`;
   link.setAttribute("href", url);
   link.setAttribute("download", sanitizedFilename);
   link.style.visibility = 'hidden';
