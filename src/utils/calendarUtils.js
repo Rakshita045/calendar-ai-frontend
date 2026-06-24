@@ -210,7 +210,7 @@ export function exportWorkingDatesToCsv(semester, workingDates) {
   });
 
   // Create Blob and trigger download
-  const csvContent = csvRows.join("\n");
+  const csvContent = "\uFEFF" + csvRows.join("\n");
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
