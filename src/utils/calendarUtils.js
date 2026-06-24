@@ -35,23 +35,70 @@ export function getWeekdayName(index) {
 }
 
 /**
- * Calculates working dates for a specific course based on academic calendars and syllabus schedule.
+ * Determines whether an event is applicable to a specific semester.
+ * It checks explicit semester mappings and does title-keyword based exclusions for other semesters.
+ */
+export function isEventApplicableToSemester(e, semester) {
+  if (!e) return false;
+  
+  // If the event has specific semesters assigned, check if it matches
+  if (e.semesters && e.semesters.length > 0) {
+    return e.semesters.includes(semester);
+  }
+
+  // Fallback: Check title heuristics for mentions of OTHER semesters
+  const titleLower = e.title.toLowerCase();
+  
+  // Define semester keywords indicating specific semesters
+  const semesterKeywords = {
+    1: ['i sem', 'i-sem', '1st sem', '1st-sem', 'first sem', 'first-sem', 'sem i', 'sem-i', 'semester i', 'semester-i'],
+    2: ['ii sem', 'ii-sem', '2nd sem', '2nd-sem', 'second sem', 'second-sem', 'sem ii', 'sem-ii', 'semester ii', 'semester-ii'],
+    3: ['iii sem', 'iii-sem', '3rd sem', '3rd-sem', 'third sem', 'third-sem', 'sem iii', 'sem-iii', 'semester iii', 'semester-iii'],
+    4: ['iv sem', 'iv-sem', '4th sem', '4th-sem', 'fourth sem', 'fourth-sem', 'sem iv', 'sem-iv', 'semester iv', 'semester-iv'],
+    5: ['v sem', 'v-sem', '5th sem', '5th-sem', 'fifth sem', 'fifth-sem', 'sem v', 'sem-v', 'semester v', 'semester-v'],
+    6: ['vi sem', 'vi-sem', '6th sem', '6th-sem', 'sixth sem', 'sixth-sem', 'sem vi', 'sem-vi', 'semester vi', 'semester-vi'],
+    7: ['vii sem', 'vii-sem', '7th sem', '7th-sem', 'seventh sem', 'seventh-sem', 'sem vii', 'sem-vii', 'semester vii', 'semester-vii'],
+    8: ['viii sem', 'viii-sem', '8th sem', '8th-sem', 'eighth sem', 'eighth-sem', 'sem viii', 'sem-viii', 'semester viii', 'semester-viii']
+  };
+
+  // If the title contains keywords for a different semester, it is not applicable
+  for (const [semNumStr, keywords] of Object.entries(semesterKeywords)) {
+    const semNum = parseInt(semNumStr, 10);
+    if (semNum !== semester) {
+      for (const keyword of keywords) {
+        if (titleLower.includes(keyword)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Calculates working dates based on two exam periods.
+ * Teaching dates run from semesterStartDate up to one day before exam2StartDate.
+ * Any dates during exam1StartDate to exam1EndDate are deducted.
  */
 export function calculateWorkingDates({
   semester,
   semesterStartDate,
-  examStartDate,
-  examEndDate,
+  exam1StartDate,
+  exam1EndDate,
+  exam2StartDate,
+  exam2EndDate,
   events,
-  courseClassDays, // Array of weekdays [0-6] where this course has lectures
-  courseId
+  courseClassDays
 }) {
-  if (!semesterStartDate || !examStartDate || !examEndDate) {
+  if (!semesterStartDate || !exam1StartDate || !exam1EndDate || !exam2StartDate) {
     return [];
   }
 
   const start = new Date(semesterStartDate);
-  const end = new Date(examEndDate);
+  // Loop ends one day before Second Mid Term Exam starts (last working day of the semester)
+  const end = new Date(exam2StartDate);
+  end.setDate(end.getDate() - 1);
   
   if (end < start) return [];
 
@@ -59,7 +106,6 @@ export function calculateWorkingDates({
   const currentDate = new Date(start);
 
   // Convert events list to easy-to-query format
-  // Key: YYYY-MM-DD, Value: list of events on that date
   const eventsByDate = {};
   for (const event of events) {
     if (!eventsByDate[event.date]) {
@@ -68,13 +114,16 @@ export function calculateWorkingDates({
     eventsByDate[event.date].push(event);
   }
 
-  // Iterate through each calendar date from semester start to exam end
+  // Iterate through each calendar date from semester start to the day before Second Mid Term Exam
   while (currentDate <= end) {
     const dateStr = formatDate(currentDate);
     const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // 1. Check if the date falls during exams
-    const isExamPeriod = dateStr >= examStartDate && dateStr <= examEndDate;
+    // 1. Check if the date falls during Exam 1 (First Mid Term) or Exam 2 (Second Mid Term)
+    const isExam1Period = dateStr >= exam1StartDate && dateStr <= exam1EndDate;
+    const isExam2Period = exam2EndDate 
+      ? (dateStr >= exam2StartDate && dateStr <= exam2EndDate)
+      : (dateStr === exam2StartDate);
 
     // 2. Check if the date is a general or semester-specific holiday
     let isHoliday = false;
@@ -83,52 +132,46 @@ export function calculateWorkingDates({
 
     const dayEvents = eventsByDate[dateStr] || [];
     for (const e of dayEvents) {
-      const isApplicableToSemester = e.semesters && (e.semesters.length === 0 || e.semesters.includes(semester));
-      const isApplicableToCourse = !e.courseId || e.courseId === courseId;
+      const isApplicableToSemester = isEventApplicableToSemester(e, semester);
 
       if (isApplicableToSemester) {
         if (e.type === 'holiday') {
           isHoliday = true;
         }
-        if (e.type === 'cancel_class' && isApplicableToCourse) {
+        if (e.type === 'cancel_class') {
           cancelClass = true;
         }
-        if (e.type === 'extra_class' && isApplicableToCourse) {
+        if (e.type === 'extra_class') {
           forceExtraClass = true;
         }
       }
     }
 
     // 3. Semester Working Days Rule:
-    // Sem 1-6: Mon-Fri working days (Sat, Sun off)
-    // Sem 7-8: Mon-Wed working days (Thu, Fri, Sat, Sun off)
+    // Sem 1-6: Mon-Fri working days
+    // Sem 7-8: Mon-Wed working days
     let isSemesterWorkingDay = false;
     if (semester >= 1 && semester <= 6) {
-      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5;
     } else if (semester === 7 || semester === 8) {
-      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 3; // Monday to Wednesday
+      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 3;
     }
 
-    // 4. Course Scheduled Days Rule:
-    // Check if the teacher has class scheduled on this weekday
+    // 4. Course Scheduled Days Rule
     const isCourseScheduledDay = courseClassDays.includes(dayOfWeek);
 
-    // Standard working date check:
-    // It must be a semester working day, a course scheduled day, not a holiday, not an exam day, and not cancelled.
-    // OR it must be explicitly forced as an extra class (which overrides normal working day rules).
+    // Standard working date check
     const isClassHeld = (forceExtraClass || (
       isSemesterWorkingDay &&
       isCourseScheduledDay &&
       !isHoliday &&
-      !isExamPeriod &&
+      !isExam1Period &&
+      !isExam2Period &&
       !cancelClass
     ));
 
     if (isClassHeld) {
-      // Find active event on this day if any
-      const relevantEvent = dayEvents.find(e => 
-        e.semesters && (e.semesters.length === 0 || e.semesters.includes(semester))
-      );
+      const relevantEvent = dayEvents.find(e => isEventApplicableToSemester(e, semester));
 
       workingDates.push({
         date: dateStr,
@@ -147,33 +190,27 @@ export function calculateWorkingDates({
 }
 
 /**
- * Exports the calculated working dates to CSV format and triggers browser download
+ * Format date string from YYYY-MM-DD to DD-MM-YYYY
+ */
+export function formatToDdMmYyyy(dateStr) {
+  if (!dateStr || !dateStr.includes('-')) return dateStr;
+  const [y, m, d] = dateStr.split('-');
+  return `${d}-${m}-${y}`;
+}
+
+/**
+ * Exports the calculated working dates to CSV format (single column, dd-mm-yyyy)
  */
 export function exportWorkingDatesToCsv(semester, workingDates) {
   const csvRows = [];
   
-  // Title / Metadata header
-  csvRows.push(`"Academic Working Dates - Semester ${semester}"`);
-  csvRows.push(`"Generated Date","${new Date().toLocaleDateString()}"`);
-  csvRows.push(''); // Empty spacer line
-
-  // Column Headers
-  csvRows.push('"Lecture #","Date","Day of Week","Details"');
-
-  // Main Working dates schedule
-  workingDates.forEach((wd, index) => {
-    const detailText = wd.eventName || (wd.isExtra ? 'Extra Class Override' : 'Regular Scheduled Class');
-    const row = [
-      index + 1,
-      wd.date,
-      wd.dayName,
-      `"${detailText.replace(/"/g, '""')}"`
-    ];
-    csvRows.push(row.join(','));
+  // Format each date to dd-mm-yyyy and push as a single column row
+  workingDates.forEach((wd) => {
+    csvRows.push(formatToDdMmYyyy(wd.date));
   });
 
   // Create Blob and trigger download
-  const csvContent = "\uFEFF" + csvRows.join("\n"); // add BOM for Excel UTF-8 compliance
+  const csvContent = csvRows.join("\n");
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

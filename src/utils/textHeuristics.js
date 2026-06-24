@@ -34,7 +34,8 @@ function extractSemesters(text) {
   const regexes = [
     /\b(?:sem|semester|term)\b\s*[-#:]?\s*([1-8ivx]+)/gi,
     /([1-8])(?:st|nd|rd|th)\s*(?:sem|semester)/gi,
-    /\b(first|second|third|fourth|fifth|sixth|seventh|eighth)\s*(?:sem|semester)/gi
+    /\b(first|second|third|fourth|fifth|sixth|seventh|eighth)\s*(?:sem|semester)/gi,
+    /\b([1-8ivx]+)(?:st|nd|rd|th)?\s+(?:sem|semester|term)\b/gi
   ];
 
   for (const regex of regexes) {
