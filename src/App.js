@@ -445,8 +445,8 @@ export default function App() {
       return;
     }
 
-    setEvents(prev => {
-      const uniqueEvents = [...prev];
+    setEvents(() => {
+      const uniqueEvents = [];
       for (const p of parsed) {
         if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
           // Add custom sub-categorization for midterms inside the events list
@@ -526,8 +526,8 @@ export default function App() {
       if (parsedEvents.length === 0) {
         window.alert("No calendar events could be parsed from this file.");
       } else {
-        setEvents(prev => {
-          const uniqueEvents = [...prev];
+        setEvents(() => {
+          const uniqueEvents = [];
           for (const p of parsedEvents) {
             if (!uniqueEvents.some(x => x.date === p.date && x.title === p.title)) {
               const titleLower = p.title.toLowerCase();
