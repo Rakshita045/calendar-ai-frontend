@@ -267,13 +267,17 @@ export default function App() {
   };
 
   const createNewSession = () => {
+    const defaultName = `Academic Plan - Sem ${semester}`;
+    const enteredName = window.prompt("Enter a name for this academic term plan:", defaultName);
+    if (enteredName === null) return;
+    const nameToUse = enteredName.trim() || defaultName;
+
     const newId = 'session-' + Date.now();
-    const newName = `Academic Plan - Sem ${semester}`;
-    const newSession = { id: newId, name: newName };
+    const newSession = { id: newId, name: nameToUse };
     const updatedIndex = [...sessions, newSession];
     
     setSessions(updatedIndex);
-    setSessionName(newName);
+    setSessionName(nameToUse);
     setCurrentSessionId(newId);
     setCurrentStep(1);
     
@@ -281,7 +285,7 @@ export default function App() {
     localStorage.setItem('academic_active_session_id', newId);
 
     const freshState = {
-      sessionName: newName,
+      sessionName: nameToUse,
       semester: 5,
       semesterStartDate: formatDate(new Date()),
       exam1StartDate: addDays(formatDate(new Date()), 30),
@@ -336,15 +340,12 @@ export default function App() {
     }
   };
 
-  // Heuristics date auto-detector based on semester selection
-  const handleSemesterSelect = (semVal) => {
-    setSemester(semVal);
-    
+  const detectTermDates = (semVal, currentEvents) => {
     let detectedStart = '';
     let detectedExam1 = '';
     let detectedExam2 = '';
 
-    for (const e of events) {
+    for (const e of currentEvents) {
       const isSemMatch = e.semesters && e.semesters.includes(semVal);
       const titleLower = e.title.toLowerCase();
 
@@ -369,25 +370,30 @@ export default function App() {
       }
     }
 
-    // Fallbacks if semester-specific not found: check general commencement
+    // Fallbacks if semester-specific not found: check general commencement if applicable to this semester
     if (!detectedStart) {
-      const generalCommencement = events.find(e => 
-        e.title.toLowerCase().includes('commencement') || 
-        e.title.toLowerCase().includes('classes begin')
+      const generalCommencement = currentEvents.find(e => 
+        (e.title.toLowerCase().includes('commencement') || 
+        e.title.toLowerCase().includes('classes begin')) &&
+        isEventApplicableToSemester(e, semVal)
       );
       if (generalCommencement) detectedStart = generalCommencement.date;
     }
 
     // Fallbacks for Exams
     if (!detectedExam1) {
-      // Find any first midterm or the earliest exam type
-      const firstExam = events.find(e => e.type === 'exam_1' || e.title.toLowerCase().includes('first mid'));
+      const firstExam = currentEvents.find(e => 
+        (e.type === 'exam_1' || e.title.toLowerCase().includes('first mid')) &&
+        isEventApplicableToSemester(e, semVal)
+      );
       if (firstExam) detectedExam1 = firstExam.date;
     }
 
     if (!detectedExam2) {
-      // Find second midterm or theory exams / general exam type
-      const secondExam = events.find(e => e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('theory exam') || e.type === 'exam');
+      const secondExam = currentEvents.find(e => 
+        (e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('theory exam') || e.type === 'exam') &&
+        isEventApplicableToSemester(e, semVal)
+      );
       if (secondExam) detectedExam2 = secondExam.date;
     }
 
@@ -397,6 +403,7 @@ export default function App() {
       setCalendarMonth(new Date(detectedStart));
       setDetectedStartFeedback(`Auto-detected class start date: ${detectedStart}`);
     } else {
+      setSemesterStartDate('');
       setDetectedStartFeedback(null);
     }
 
@@ -405,6 +412,8 @@ export default function App() {
       setExam1EndDate(addDays(detectedExam1, exam1Duration - 1));
       setDetectedExam1Feedback(`Auto-detected 1st Mid Term start date: ${detectedExam1}`);
     } else {
+      setExam1StartDate('');
+      setExam1EndDate('');
       setDetectedExam1Feedback(null);
     }
 
@@ -413,8 +422,16 @@ export default function App() {
       setExam2EndDate(addDays(detectedExam2, exam2Duration - 1));
       setDetectedExam2Feedback(`Auto-detected 2nd Mid Term start date: ${detectedExam2}`);
     } else {
+      setExam2StartDate('');
+      setExam2EndDate('');
       setDetectedExam2Feedback(null);
     }
+  };
+
+  // Heuristics date auto-detector based on semester selection
+  const handleSemesterSelect = (semVal) => {
+    setSemester(semVal);
+    detectTermDates(semVal, events);
   };
 
   // Heuristic Text Area Parsing
@@ -443,7 +460,9 @@ export default function App() {
           uniqueEvents.push({ ...p, type });
         }
       }
-      return uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+      const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setTimeout(() => detectTermDates(semester, sorted), 0);
+      return sorted;
     });
 
     setRawTextImport('');
@@ -521,7 +540,9 @@ export default function App() {
               uniqueEvents.push({ ...p, type });
             }
           }
-          return uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+          const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+          setTimeout(() => detectTermDates(semester, sorted), 0);
+          return sorted;
         });
         window.alert(`Success: Loaded ${parsedEvents.length} calendar events from ${file.name}`);
       }
