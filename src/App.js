@@ -101,6 +101,7 @@ export default function App() {
 
   // General Calendar Events
   const [events, setEvents] = useState(DEFAULT_EVENTS);
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   // Legend checkboxes count toggle state
   const [showCounts, setShowCounts] = useState({
@@ -223,13 +224,14 @@ export default function App() {
       exam2InputMode,
       classDays,
       events,
-      currentStep
+      currentStep,
+      uploadedFileName
     });
   }, [
     currentSessionId, sessionName, semester, semesterStartDate,
     exam1StartDate, exam1Duration, exam1EndDate, exam1InputMode,
     exam2StartDate, exam2Duration, exam2EndDate, exam2InputMode,
-    classDays, events, currentStep
+    classDays, events, currentStep, uploadedFileName
   ]);
 
   // Exam 1 Dates Syncing
@@ -300,6 +302,7 @@ export default function App() {
       setClassDays(data.classDays || [1, 3, 5]);
       setEvents(data.events || []);
       setCurrentStep(data.currentStep || 1);
+      setUploadedFileName(data.uploadedFileName || '');
       localStorage.setItem('academic_active_session_id', id);
 
       if (data.semesterStartDate) {
@@ -340,7 +343,8 @@ export default function App() {
       exam2InputMode: 'duration',
       classDays: [1, 3, 5],
       events: [],
-      currentStep: 1
+      currentStep: 1,
+      uploadedFileName: ''
     };
     
     setSemester(freshState.semester);
@@ -358,6 +362,7 @@ export default function App() {
 
     setClassDays(freshState.classDays);
     setEvents([]);
+    setUploadedFileName('');
     
     saveSessionData(newId, freshState);
   };
@@ -540,6 +545,7 @@ export default function App() {
     setSemester(targetSem);
     setEvents(sorted);
     detectTermDates(targetSem, sorted);
+    setUploadedFileName('');
 
     setRawTextImport('');
     window.alert(`Success: Parsed and imported ${parsed.length} calendar events!`);
@@ -630,6 +636,7 @@ export default function App() {
         setSemester(targetSem);
         setEvents(sorted);
         detectTermDates(targetSem, sorted);
+        setUploadedFileName(file.name);
         window.alert(`Success: Loaded ${parsedEvents.length} calendar events from ${file.name}`);
       }
     } catch (err) {
@@ -1005,18 +1012,28 @@ export default function App() {
               <p className="text-xs text-slate-400">Upload your PDF schedule or copy-paste text so we can read holidays & exam dates.</p>
             </div>
 
-            <div className="relative border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition-colors bg-slate-900/30">
+             <div className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${uploadedFileName ? 'border-emerald-500 bg-emerald-950/10 hover:border-emerald-400' : 'border-slate-700 bg-slate-900/30 hover:border-indigo-500'}`}>
               <input
                 type="file"
                 accept=".pdf,.ics,.csv,.json"
                 onChange={handleFileUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <div className="text-indigo-400 mb-2 flex justify-center"><Icons.Upload /></div>
-              <span className="text-sm text-slate-200 font-bold block">
-                {loading ? 'Reading File Content...' : 'Choose PDF, ICS, CSV, or JSON'}
+              <div className="mb-2 flex justify-center">
+                {uploadedFileName ? (
+                  <svg className="w-8 h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <div className="text-indigo-400"><Icons.Upload /></div>
+                )}
+              </div>
+              <span className="text-sm font-bold block text-slate-200">
+                {loading ? 'Reading File Content...' : (uploadedFileName ? `📄 ${uploadedFileName}` : 'Choose PDF, ICS, CSV, or JSON')}
               </span>
-              <span className="text-xs text-slate-500 mt-1 block">Supported standard formats parsed client-side</span>
+              <span className="text-xs text-slate-500 mt-1 block">
+                {uploadedFileName ? 'Click or drag here to choose a different file' : 'Supported standard formats parsed client-side'}
+              </span>
             </div>
 
             <div className="space-y-2">
