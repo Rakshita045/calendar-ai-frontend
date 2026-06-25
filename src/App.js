@@ -80,6 +80,7 @@ export default function App() {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState('');
   const [sessionName, setSessionName] = useState(DEFAULT_SESSION_NAME);
+  const [subjectName, setSubjectName] = useState('');
 
   // Term Parameters
   const [semester, setSemester] = useState(5);
@@ -216,6 +217,7 @@ export default function App() {
     if (!currentSessionId) return;
     saveSessionData(currentSessionId, {
       sessionName,
+      subjectName,
       semester,
       semesterStartDate,
       exam1StartDate,
@@ -232,7 +234,7 @@ export default function App() {
       uploadedFileName
     });
   }, [
-    currentSessionId, sessionName, semester, semesterStartDate,
+    currentSessionId, sessionName, subjectName, semester, semesterStartDate,
     exam1StartDate, exam1Duration, exam1EndDate, exam1InputMode,
     exam2StartDate, exam2Duration, exam2EndDate, exam2InputMode,
     classDays, events, currentStep, uploadedFileName
@@ -290,6 +292,7 @@ export default function App() {
       const data = JSON.parse(savedData);
       setCurrentSessionId(id);
       setSessionName(data.sessionName || "Term Schedule");
+      setSubjectName(data.subjectName || '');
       setSemester(data.semester || 5);
       setSemesterStartDate(data.semesterStartDate || '2026-08-03');
 
@@ -335,6 +338,7 @@ export default function App() {
 
     const freshState = {
       sessionName: nameToUse,
+      subjectName: '',
       semester: 5,
       semesterStartDate: formatDate(new Date()),
       exam1StartDate: addDays(formatDate(new Date()), 30),
@@ -367,6 +371,7 @@ export default function App() {
     setClassDays(freshState.classDays);
     setEvents([]);
     setUploadedFileName('');
+    setSubjectName('');
 
     saveSessionData(newId, freshState);
   };
@@ -808,7 +813,7 @@ export default function App() {
   examsCount = exam1Days + exam2Days;
 
   // Step Completeness Validation Rules
-  const isStep1Valid = !!uploadedFileName;
+  const isStep1Valid = !!uploadedFileName && !!subjectName.trim();
   const isStep2Valid = !!(isStep1Valid && semester && semesterStartDate && exam1StartDate && exam2StartDate);
   const isStep3Valid = !!(isStep2Valid && exam1StartDate && exam1EndDate && exam2StartDate && exam2EndDate);
   const isStep4Valid = !!(isStep3Valid && classDays.length > 0);
@@ -943,7 +948,10 @@ export default function App() {
     return (
       <div className="print-container">
         <div className="print-header">
-          <h1>My Calendar - Academic Plan Report</h1>
+          <h1>Poornima College of Engineering</h1>
+          <h2 style={{ fontSize: '12px', fontWeight: '750', color: '#475569', margin: '2px 0 0 0', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+            Subject Deployment Planning {subjectName ? `- ${subjectName}` : ''}
+          </h2>
           <div className="print-header-details">
             <div>
               <span>Semester: <strong>Sem {semester}</strong></span>
@@ -1153,10 +1161,10 @@ export default function App() {
           <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="p-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700/60 overflow-hidden flex items-center justify-center w-11 h-11">
-                <img src="/logo192.png" alt="My Calendar Logo" className="w-full h-full object-contain rounded-lg" />
+                <img src="/logo192.png" alt="Subject Deployment Planning Logo" className="w-full h-full object-contain rounded-lg" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">My Calendar</h1>
+                <h1 className="text-xl font-bold tracking-tight text-white">Subject Deployment Planning</h1>
                 <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
               </div>
             </div>
@@ -1247,8 +1255,20 @@ export default function App() {
           {currentStep === 1 && (
             <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
               <div className="text-center space-y-2">
-                <h2 className="text-lg font-bold text-white">Step 1: Upload College Academic Calendar</h2>
-                <p className="text-xs text-slate-400">Upload your PDF schedule or copy-paste text so we can read holidays & exam dates.</p>
+                <h2 className="text-lg font-bold text-white">Step 1: Setup Planning Details</h2>
+                <p className="text-xs text-slate-400">Enter the subject name and choose/paste your college calendar schedule.</p>
+              </div>
+
+              {/* Subject Name Input */}
+              <div className="space-y-1.5 bg-slate-900/40 p-4 border border-slate-750 rounded-xl">
+                <label className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Subject Name / Course Title:</label>
+                <input
+                  type="text"
+                  value={subjectName}
+                  onChange={(e) => setSubjectName(e.target.value)}
+                  placeholder="e.g. Digital Logic Design, Data Structures"
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 font-semibold"
+                />
               </div>
 
               <div className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${uploadedFileName ? 'border-emerald-500 bg-emerald-950/10 hover:border-emerald-400' : 'border-slate-700 bg-slate-900/30 hover:border-indigo-500'}`}>

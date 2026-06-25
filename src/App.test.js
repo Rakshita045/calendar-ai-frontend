@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders My Calendar title', () => {
+test('renders Subject Deployment Planning title', () => {
   render(<App />);
-  const headerElement = screen.getByText(/My Calendar/i);
-  expect(headerElement).toBeInTheDocument();
+  const headerElements = screen.getAllByText(/Subject Deployment Planning/i);
+  expect(headerElements.length).toBeGreaterThan(0);
 });
