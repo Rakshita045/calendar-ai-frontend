@@ -10,6 +10,7 @@ import {
   formatToDdMmYyyy,
   isEventApplicableToSemester
 } from './utils/calendarUtils';
+import './App.css';
 
 // SVG Inline Icons
 const Icons = {
@@ -83,7 +84,7 @@ export default function App() {
   // Term Parameters
   const [semester, setSemester] = useState(5);
   const [semesterStartDate, setSemesterStartDate] = useState('2026-08-03');
-  
+
   // Exam 1 (First Mid Term) State
   const [exam1StartDate, setExam1StartDate] = useState('2026-09-07');
   const [exam1Duration, setExam1Duration] = useState(4);
@@ -119,17 +120,20 @@ export default function App() {
 
   // Interactive Calendar month navigation
   const [calendarMonth, setCalendarMonth] = useState(new Date('2026-08-01'));
-  
+
   // UI states
   const [loading, setLoading] = useState(false);
   const [rawTextImport, setRawTextImport] = useState('');
   const [calendarPopupDate, setCalendarPopupDate] = useState(null);
   const [calendarPopupForm, setCalendarPopupForm] = useState({ title: '', type: 'holiday', semesterSpec: 'all', customCourseId: '' });
 
+  // Print & PDF states
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+
   const getAvailableSemestersForEvents = (currentEvents) => {
     let oddMentions = 0;
     let evenMentions = 0;
-    
+
     for (const e of currentEvents) {
       if (e.semesters && e.semesters.length > 0) {
         for (const sem of e.semesters) {
@@ -138,7 +142,7 @@ export default function App() {
         }
       }
     }
-    
+
     let termType = 'all';
     if (evenMentions > oddMentions) {
       termType = 'even';
@@ -158,7 +162,7 @@ export default function App() {
       if (janToJune > julyToDec) termType = 'even';
       else if (julyToDec > janToJune) termType = 'odd';
     }
-    
+
     if (termType === 'even') return [2, 4, 6, 8];
     if (termType === 'odd') return [1, 3, 5, 7];
     return [1, 2, 3, 4, 5, 6, 7, 8];
@@ -288,12 +292,12 @@ export default function App() {
       setSessionName(data.sessionName || "Term Schedule");
       setSemester(data.semester || 5);
       setSemesterStartDate(data.semesterStartDate || '2026-08-03');
-      
+
       setExam1StartDate(data.exam1StartDate || '2026-09-07');
       setExam1Duration(data.exam1Duration || 4);
       setExam1EndDate(data.exam1EndDate || '2026-09-10');
       setExam1InputMode(data.exam1InputMode || 'duration');
-      
+
       setExam2StartDate(data.exam2StartDate || '2026-11-23');
       setExam2Duration(data.exam2Duration || 5);
       setExam2EndDate(data.exam2EndDate || '2026-11-27');
@@ -320,12 +324,12 @@ export default function App() {
     const newId = 'session-' + Date.now();
     const newSession = { id: newId, name: nameToUse };
     const updatedIndex = [...sessions, newSession];
-    
+
     setSessions(updatedIndex);
     setSessionName(nameToUse);
     setCurrentSessionId(newId);
     setCurrentStep(1);
-    
+
     localStorage.setItem('academic_sessions_index', JSON.stringify(updatedIndex));
     localStorage.setItem('academic_active_session_id', newId);
 
@@ -346,10 +350,10 @@ export default function App() {
       currentStep: 1,
       uploadedFileName: ''
     };
-    
+
     setSemester(freshState.semester);
     setSemesterStartDate(freshState.semesterStartDate);
-    
+
     setExam1StartDate(freshState.exam1StartDate);
     setExam1Duration(freshState.exam1Duration);
     setExam1EndDate(freshState.exam1EndDate);
@@ -363,7 +367,7 @@ export default function App() {
     setClassDays(freshState.classDays);
     setEvents([]);
     setUploadedFileName('');
-    
+
     saveSessionData(newId, freshState);
   };
 
@@ -394,11 +398,11 @@ export default function App() {
 
     const isNotEndEvent = (title) => {
       const lower = title.toLowerCase();
-      return !lower.includes('end') && 
-             !lower.includes('conclude') && 
-             !lower.includes('finish') && 
-             !lower.includes('over') && 
-             !lower.includes('last');
+      return !lower.includes('end') &&
+        !lower.includes('conclude') &&
+        !lower.includes('finish') &&
+        !lower.includes('over') &&
+        !lower.includes('last');
     };
 
     for (const e of currentEvents) {
@@ -417,10 +421,10 @@ export default function App() {
 
       // Detect First Mid Term Exams (earliest match)
       if (isSemMatch && !detectedExam1 && (
-        titleLower.includes('first mid') || 
-        titleLower.includes('1st mid') || 
-        titleLower.includes('mid term i') || 
-        titleLower.includes('mid-term i') || 
+        titleLower.includes('first mid') ||
+        titleLower.includes('1st mid') ||
+        titleLower.includes('mid term i') ||
+        titleLower.includes('mid-term i') ||
         titleLower.includes('midterm i')
       ) && isNotEndEvent(e.title)) {
         detectedExam1 = e.date;
@@ -428,10 +432,10 @@ export default function App() {
 
       // Detect Second Mid Term Exams (earliest match)
       if (isSemMatch && !detectedExam2 && (
-        titleLower.includes('second mid') || 
-        titleLower.includes('2nd mid') || 
-        titleLower.includes('mid term ii') || 
-        titleLower.includes('mid-term ii') || 
+        titleLower.includes('second mid') ||
+        titleLower.includes('2nd mid') ||
+        titleLower.includes('mid term ii') ||
+        titleLower.includes('mid-term ii') ||
         titleLower.includes('midterm ii')
       ) && isNotEndEvent(e.title)) {
         detectedExam2 = e.date;
@@ -440,9 +444,9 @@ export default function App() {
 
     // Fallbacks if semester-specific not found: check general commencement if applicable to this semester
     if (!detectedStart) {
-      const generalCommencement = currentEvents.find(e => 
-        (e.title.toLowerCase().includes('commencement') || 
-        e.title.toLowerCase().includes('classes begin')) &&
+      const generalCommencement = currentEvents.find(e =>
+        (e.title.toLowerCase().includes('commencement') ||
+          e.title.toLowerCase().includes('classes begin')) &&
         isEventApplicableToSemester(e, semVal) &&
         isNotEndEvent(e.title)
       );
@@ -451,7 +455,7 @@ export default function App() {
 
     // Fallbacks for Exams
     if (!detectedExam1) {
-      const firstExam = currentEvents.find(e => 
+      const firstExam = currentEvents.find(e =>
         (e.type === 'exam_1' || e.title.toLowerCase().includes('first mid') || e.title.toLowerCase().includes('1st mid')) &&
         isEventApplicableToSemester(e, semVal) &&
         isNotEndEvent(e.title)
@@ -460,7 +464,7 @@ export default function App() {
     }
 
     if (!detectedExam2) {
-      const secondExam = currentEvents.find(e => 
+      const secondExam = currentEvents.find(e =>
         (e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('2nd mid') || e.title.toLowerCase().includes('theory exam')) &&
         isEventApplicableToSemester(e, semVal) &&
         isNotEndEvent(e.title)
@@ -510,7 +514,7 @@ export default function App() {
     if (!rawTextImport.trim()) return;
     const year = new Date(semesterStartDate).getFullYear() || new Date().getFullYear();
     const parsed = require('./utils/textHeuristics').parseAcademicText(rawTextImport, year);
-    
+
     if (parsed.length === 0) {
       window.alert("Could not extract any events with date formats. Check if lines contain valid dates.");
       return;
@@ -531,21 +535,21 @@ export default function App() {
       }
     }
     const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     // Determine the available semesters based on even/odd semester context of the new events list
     const availableSems = getAvailableSemestersForEvents(sorted);
-    
+
     // Find the semesters explicitly detected in the calendar
     const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
     const explicitDetected = detectedSemesters.filter(s => availableSems.includes(s));
-    
+
     // Target semester is the first explicit one, or the first available one (e.g. 2 for even, 1 for odd)
     const targetSem = explicitDetected.length > 0 ? explicitDetected[0] : availableSems[0];
-    
+
     setSemester(targetSem);
     setEvents(sorted);
     detectTermDates(targetSem, sorted);
-    setUploadedFileName('');
+    setUploadedFileName('Pasted Schedule Text');
 
     setRawTextImport('');
     window.alert(`Success: Parsed and imported ${parsed.length} calendar events!`);
@@ -622,17 +626,17 @@ export default function App() {
           }
         }
         const sorted = uniqueEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-        
+
         // Determine the available semesters based on even/odd semester context of the new events list
         const availableSems = getAvailableSemestersForEvents(sorted);
-        
+
         // Find the semesters explicitly detected in the calendar
         const detectedSemesters = [...new Set(sorted.flatMap(x => x.semesters || []))].filter(Boolean).sort((a, b) => a - b);
         const explicitDetected = detectedSemesters.filter(s => availableSems.includes(s));
-        
+
         // Target semester is the first explicit one, or the first available one (e.g. 2 for even, 1 for odd)
         const targetSem = explicitDetected.length > 0 ? explicitDetected[0] : availableSems[0];
-        
+
         setSemester(targetSem);
         setEvents(sorted);
         detectTermDates(targetSem, sorted);
@@ -650,8 +654,8 @@ export default function App() {
 
   const handleToggleCourseDay = (dayIndex) => {
     const alreadyHas = classDays.includes(dayIndex);
-    setClassDays(alreadyHas 
-      ? classDays.filter(d => d !== dayIndex) 
+    setClassDays(alreadyHas
+      ? classDays.filter(d => d !== dayIndex)
       : [...classDays, dayIndex].sort()
     );
   };
@@ -667,7 +671,7 @@ export default function App() {
   const handleOpenDayDialog = (dateStr) => {
     const dayOfWeek = new Date(dateStr).getDay();
     const isNormalClassDay = classDays.includes(dayOfWeek);
-    const isSemesterWorking = (semester >= 1 && semester <= 6) 
+    const isSemesterWorking = (semester >= 1 && semester <= 6)
       ? (dayOfWeek >= 1 && dayOfWeek <= 5)
       : (dayOfWeek >= 1 && dayOfWeek <= 3);
 
@@ -753,7 +757,7 @@ export default function App() {
   let cancelledCount = 0;
 
   const startRange = new Date(semesterStartDate);
-  
+
   // Teaching stops one day before Second Mid Term starts
   const endRange = new Date(exam2StartDate);
   endRange.setDate(endRange.getDate() - 1);
@@ -763,11 +767,11 @@ export default function App() {
     while (tempDate <= endRange) {
       const dateStr = formatDate(tempDate);
       const dayOfWeek = tempDate.getDay();
-      
+
       const isExam1 = dateStr >= exam1StartDate && dateStr <= exam1EndDate;
       const dayEvents = events.filter(e => e.date === dateStr);
-      
-      const isHoliday = dayEvents.some(e => 
+
+      const isHoliday = dayEvents.some(e =>
         e.type === 'holiday' && isEventApplicableToSemester(e, semester)
       );
       const isCancelled = dayEvents.some(e => e.type === 'cancel_class');
@@ -803,6 +807,228 @@ export default function App() {
   const exam2Days = getDaysDifference(exam2StartDate, exam2EndDate);
   examsCount = exam1Days + exam2Days;
 
+  // Step Completeness Validation Rules
+  const isStep1Valid = !!uploadedFileName;
+  const isStep2Valid = !!(isStep1Valid && semester && semesterStartDate && exam1StartDate && exam2StartDate);
+  const isStep3Valid = !!(isStep2Valid && exam1StartDate && exam1EndDate && exam2StartDate && exam2EndDate);
+  const isStep4Valid = !!(isStep3Valid && classDays.length > 0);
+
+  // Helper to retrieve A4-sized calendar month ranges
+  const getMonthsInSemester = () => {
+    if (!semesterStartDate || !exam2StartDate) return [];
+    const start = new Date(semesterStartDate);
+    const end = new Date(exam2StartDate);
+    const list = [];
+    let curr = new Date(start.getFullYear(), start.getMonth(), 1);
+    const limit = new Date(end.getFullYear(), end.getMonth(), 1);
+    let safety = 0;
+    while (curr <= limit && safety < 12) {
+      list.push(new Date(curr));
+      curr.setMonth(curr.getMonth() + 1);
+      safety++;
+    }
+    return list;
+  };
+
+  // Compact month rendering helper for printable area
+  const renderPrintMonthGrid = (monthDate) => {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const mappedLecturesByDate = {};
+    calculatedClassDates.forEach((wd, index) => {
+      mappedLecturesByDate[wd.date] = { ...wd, lectureNumber: index + 1 };
+    });
+
+    const eventsByDate = {};
+    for (const ev of events) {
+      if (isEventApplicableToSemester(ev, semester)) {
+        eventsByDate[ev.date] = ev;
+      }
+    }
+
+    const cells = [];
+    for (let i = 0; i < firstDay; i++) {
+      cells.push(<div key={`pad-${i}`} className="print-day-cell other-month"></div>);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+      const date = new Date(year, month, d);
+      const dateStr = formatDate(date);
+      const dayOfWeek = date.getDay();
+
+      const lec = mappedLecturesByDate[dateStr];
+      const ev = eventsByDate[dateStr];
+
+      const isExam1 = dateStr >= exam1StartDate && dateStr <= exam1EndDate;
+      const isExam2 = dateStr >= exam2StartDate && dateStr <= exam2EndDate;
+      const isPostSemester = dateStr > exam2EndDate;
+
+      const isSemWorking = (semester >= 1 && semester <= 6)
+        ? (dayOfWeek >= 1 && dayOfWeek <= 5)
+        : (dayOfWeek >= 1 && dayOfWeek <= 3);
+
+      const isCourseDay = classDays.includes(dayOfWeek);
+      const isCancelled = events.some(e => e.date === dateStr && e.type === 'cancel_class');
+
+      let cellClass = "print-day-cell";
+
+      if (isExam1 || isExam2) {
+        cellClass += " exam";
+      } else if (isPostSemester) {
+        cellClass += " other-month";
+      } else if (ev && ev.type === 'holiday') {
+        cellClass += " holiday";
+      } else if (isCancelled) {
+        cellClass += " cancelled";
+      } else if (lec) {
+        cellClass += " lecture";
+      } else if (!isSemWorking || !isCourseDay) {
+        // regular off day
+      }
+
+      cells.push(
+        <div key={d} className={cellClass}>
+          {d}
+        </div>
+      );
+    }
+
+    return (
+      <div className="print-month-grid" key={monthDate.toString()}>
+        <div className="print-month-title">
+          {monthDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+        </div>
+        <div className="print-days-grid">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayHeader, idx) => (
+            <div key={idx} className="print-day-header">{dayHeader}</div>
+          ))}
+          {cells}
+        </div>
+      </div>
+    );
+  };
+
+  // Renders the clean printable A4 format
+  const renderPrintReport = () => {
+    const totalLectures = calculatedClassDates.length;
+    const firstLec = totalLectures > 0 ? calculatedClassDates[0].date : semesterStartDate;
+    const lastLec = totalLectures > 0 ? calculatedClassDates[totalLectures - 1].date : semesterStartDate;
+
+    const stats = {
+      firstTeachingStart: formatToDdMmYyyy(semesterStartDate),
+      lastTeachingDate: formatToDdMmYyyy(lastLec),
+      totalWeeksSemester: Math.ceil(getDaysDifference(semesterStartDate, exam2EndDate || exam2StartDate) / 7),
+      subjectWeeks: totalLectures > 0
+        ? Math.ceil(getDaysDifference(firstLec, lastLec) / 7)
+        : 0,
+      totalDaysSemester: getDaysDifference(semesterStartDate, exam2EndDate || exam2StartDate),
+      subjectDays: totalLectures,
+      lecturesBeforeMidterm1: calculatedClassDates.filter(wd => wd.date < exam1StartDate).length,
+      lecturesAfterMidterm1: calculatedClassDates.filter(wd => wd.date > exam1EndDate).length
+    };
+
+    const months = getMonthsInSemester();
+
+
+    const colsCount = 2;
+    const itemsPerCol = Math.ceil(calculatedClassDates.length / colsCount);
+    const chunkedDates = [];
+    for (let i = 0; i < colsCount; i++) {
+      chunkedDates.push(calculatedClassDates.slice(i * itemsPerCol, (i + 1) * itemsPerCol));
+    }
+
+    return (
+      <div className="print-container">
+        <div className="print-header">
+          <h1>My Calendar - Academic Plan Report</h1>
+          <div className="print-header-details">
+            <div>
+              <span>Semester: <strong>Sem {semester}</strong></span>
+              <span className="mx-2">|</span>
+              <span>Plan Name: <strong>{sessionName}</strong></span>
+            </div>
+            <div>
+              <span>Classes: <strong>{classDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div className="print-grid">
+          {/* Left: Stack of compact month calendars */}
+          <div className="print-left-calendar">
+            {months.map(m => renderPrintMonthGrid(m))}
+          </div>
+
+          {/* Right: Dual-column list of dates */}
+          <div className="print-right-dates">
+            <h4>List of Scheduled Working Dates</h4>
+            <div className="print-dates-columns">
+              {chunkedDates.map((chunk, cIdx) => (
+                <div key={cIdx} className="space-y-0.5">
+                  {chunk.map((wd, idx) => {
+                    const globalIdx = cIdx * itemsPerCol + idx + 1;
+                    return (
+                      <div key={wd.date} className={`print-date-item ${wd.isExtra ? 'extra' : ''}`}>
+                        <span className="num">Lec #{globalIdx}</span>
+                        <span className="val">{formatToDdMmYyyy(wd.date)} ({wd.dayName.substring(0, 3)})</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {calculatedClassDates.length === 0 && (
+                <div className="col-span-2 text-center text-slate-400 py-4 font-semibold">
+                  No lectures calculated. Please configure your weekdays & start dates.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="print-stats-section">
+          <h4 className="print-stats-title">Academic Metrics Summary</h4>
+          <div className="print-stats-grid">
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.firstTeachingStart}</div>
+              <div className="print-stat-label">1. First Class Start Date</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.lastTeachingDate}</div>
+              <div className="print-stat-label">2. Last Teaching Date</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.totalWeeksSemester} Weeks</div>
+              <div className="print-stat-label">3. Weeks (Semester)</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.subjectWeeks} Weeks</div>
+              <div className="print-stat-label">4. Weeks (Subject)</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.totalDaysSemester} Days</div>
+              <div className="print-stat-label">5. Days (Semester)</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.subjectDays} Days</div>
+              <div className="print-stat-label">6. Days (Subject)</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.lecturesBeforeMidterm1} Lectures</div>
+              <div className="print-stat-label">7. Lectures (Pre-Mid 1)</div>
+            </div>
+            <div className="print-stat-card">
+              <div className="print-stat-val">{stats.lecturesAfterMidterm1} Lectures</div>
+              <div className="print-stat-label">8. Lectures (Post-Mid 1)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderInteractiveCalendar = () => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
@@ -830,10 +1056,10 @@ export default function App() {
       const date = new Date(year, month, d);
       const dateStr = formatDate(date);
       const dayOfWeek = date.getDay();
-      
+
       const lec = mappedLecturesByDate[dateStr];
       const ev = eventsByDate[dateStr];
-      
+
       const isExam1 = dateStr >= exam1StartDate && dateStr <= exam1EndDate;
       const isExam2 = dateStr >= exam2StartDate && dateStr <= exam2EndDate;
       const isPostSemester = dateStr > exam2EndDate;
@@ -921,619 +1147,681 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-12">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-slate-900/85 border-b border-slate-800/80">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700/60 overflow-hidden flex items-center justify-center w-11 h-11">
-              <img src="/logo192.png" alt="My Calendar Logo" className="w-full h-full object-contain rounded-lg" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">My Calendar</h1>
-              <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={currentSessionId}
-              onChange={(e) => loadSession(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs outline-none font-semibold"
-            >
-              {sessions.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <button
-              onClick={createNewSession}
-              title="Create New Term Plan"
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 rounded-lg transition-colors"
-            >
-              <Icons.Plus />
-            </button>
-            <button
-              onClick={(e) => deleteSession(currentSessionId, e)}
-              title="Delete Current Term Plan"
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg transition-colors"
-            >
-              <Icons.Trash />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Progress wizard bar */}
-      <div className="max-w-3xl mx-auto px-4 mt-6">
-        <div className="flex justify-between items-center bg-slate-800/30 border border-slate-800 rounded-2xl p-3 text-xs text-slate-400">
-          <button
-            onClick={() => setCurrentStep(1)}
-            className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 1 ? 'bg-indigo-650 text-white font-bold' : ''}`}
-          >
-            1. Upload Calendar
-          </button>
-          <span className="text-slate-700">➔</span>
-          <button
-            onClick={() => setCurrentStep(2)}
-            className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 2 ? 'bg-indigo-650 text-white font-bold' : ''}`}
-          >
-            2. Select Semester
-          </button>
-          <span className="text-slate-700">➔</span>
-          <button
-            onClick={() => setCurrentStep(3)}
-            className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 3 ? 'bg-indigo-650 text-white font-bold' : ''}`}
-          >
-            3. Midterm Exams
-          </button>
-          <span className="text-slate-700">➔</span>
-          <button
-            onClick={() => setCurrentStep(4)}
-            className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 4 ? 'bg-indigo-650 text-white font-bold' : ''}`}
-          >
-            4. Class Days
-          </button>
-          <span className="text-slate-700">➔</span>
-          <button
-            onClick={() => setCurrentStep(5)}
-            className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 5 ? 'bg-indigo-650 text-white font-bold' : ''}`}
-          >
-            5. Schedule Results
-          </button>
-        </div>
-      </div>
-
-      <main className="max-w-6xl mx-auto px-4 mt-6">
-
-        {/* STEP 1: Upload / Paste Calendar */}
-        {currentStep === 1 && (
-          <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-lg font-bold text-white">Step 1: Upload College Academic Calendar</h2>
-              <p className="text-xs text-slate-400">Upload your PDF schedule or copy-paste text so we can read holidays & exam dates.</p>
-            </div>
-
-             <div className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${uploadedFileName ? 'border-emerald-500 bg-emerald-950/10 hover:border-emerald-400' : 'border-slate-700 bg-slate-900/30 hover:border-indigo-500'}`}>
-              <input
-                type="file"
-                accept=".pdf,.ics,.csv,.json"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <div className="mb-2 flex justify-center">
-                {uploadedFileName ? (
-                  <svg className="w-8 h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ) : (
-                  <div className="text-indigo-400"><Icons.Upload /></div>
-                )}
+      <div className="no-print">
+        {/* Header */}
+        <header className="sticky top-0 z-40 backdrop-blur-md bg-slate-900/85 border-b border-slate-800/80">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700/60 overflow-hidden flex items-center justify-center w-11 h-11">
+                <img src="/logo192.png" alt="My Calendar Logo" className="w-full h-full object-contain rounded-lg" />
               </div>
-              <span className="text-sm font-bold block text-slate-200">
-                {loading ? 'Reading File Content...' : (uploadedFileName ? `📄 ${uploadedFileName}` : 'Choose PDF, ICS, CSV, or JSON')}
-              </span>
-              <span className="text-xs text-slate-500 mt-1 block">
-                {uploadedFileName ? 'Click or drag here to choose a different file' : 'Supported standard formats parsed client-side'}
-              </span>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white">My Calendar</h1>
+                <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-400 block">Or Paste Schedule Text:</label>
-              <textarea
-                rows={4}
-                value={rawTextImport}
-                onChange={(e) => setRawTextImport(e.target.value)}
-                placeholder="e.g. 15 August 2026 - Independence Day&#10;28 April 2026 - VI Semester Exams Start"
-                className="w-full bg-slate-900 border border-slate-700 text-slate-350 rounded-lg p-3 text-xs outline-none focus:border-indigo-500 font-mono"
-              ></textarea>
-              <button
-                onClick={triggerTextImport}
-                disabled={!rawTextImport.trim()}
-                className="w-full bg-indigo-650 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
+            <div className="flex items-center gap-2">
+              <select
+                value={currentSessionId}
+                onChange={(e) => loadSession(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-xs outline-none font-semibold"
               >
-                Extract Dates
+                {sessions.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={createNewSession}
+                title="Create New Term Plan"
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 rounded-lg transition-colors"
+              >
+                <Icons.Plus />
               </button>
-            </div>
-
-            <div className="border-t border-slate-750 pt-4 flex justify-between items-center text-xs">
-              <span className="text-slate-400">Currently parsed events: <span className="font-bold text-slate-200">{events.length}</span></span>
               <button
-                onClick={() => setCurrentStep(2)}
-                className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1"
+                onClick={(e) => deleteSession(currentSessionId, e)}
+                title="Delete Current Term Plan"
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg transition-colors"
               >
-                Continue <Icons.ChevronRight />
+                <Icons.Trash />
               </button>
             </div>
           </div>
-        )}
+        </header>
 
-        {/* STEP 2: Select Semester (runs auto-detection) */}
-        {currentStep === 2 && (
-          <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-lg font-bold text-white">Step 2: Which semester are you teaching?</h2>
-              <p className="text-xs text-slate-400">Selecting a semester determines the weekly college working days and auto-fills term dates from the parsed calendar.</p>
-            </div>
+        {/* Progress wizard bar */}
+        <div className="max-w-3xl mx-auto px-4 mt-6">
+          <div className="flex justify-between items-center bg-slate-800/30 border border-slate-800 rounded-2xl p-3 text-xs text-slate-400">
+            <button
+              onClick={() => setCurrentStep(1)}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer hover:bg-slate-800 hover:text-white ${currentStep === 1 ? 'bg-indigo-650 text-white font-bold' : ''}`}
+            >
+              1. Upload Calendar
+            </button>
+            <span className="text-slate-700">➔</span>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {getAvailableSemesters().map(num => (
+            <button
+              onClick={() => isStep1Valid && setCurrentStep(2)}
+              disabled={!isStep1Valid}
+              className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep1Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
+                } ${currentStep === 2 ? 'bg-indigo-650 text-white font-bold' : ''}`}
+            >
+              2. Select Semester
+            </button>
+            <span className="text-slate-700">➔</span>
+
+            <button
+              onClick={() => isStep2Valid && setCurrentStep(3)}
+              disabled={!isStep2Valid}
+              className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep2Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
+                } ${currentStep === 3 ? 'bg-indigo-650 text-white font-bold' : ''}`}
+            >
+              3. Midterm Exams
+            </button>
+            <span className="text-slate-700">➔</span>
+
+            <button
+              onClick={() => isStep3Valid && setCurrentStep(4)}
+              disabled={!isStep3Valid}
+              className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep3Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
+                } ${currentStep === 4 ? 'bg-indigo-650 text-white font-bold' : ''}`}
+            >
+              4. Class Days
+            </button>
+            <span className="text-slate-700">➔</span>
+
+            <button
+              onClick={() => isStep4Valid && setCurrentStep(5)}
+              disabled={!isStep4Valid}
+              className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep4Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
+                } ${currentStep === 5 ? 'bg-indigo-650 text-white font-bold' : ''}`}
+            >
+              5. Schedule Results
+            </button>
+          </div>
+        </div>
+
+        <main className="max-w-6xl mx-auto px-4 mt-6">
+
+          {/* STEP 1: Upload / Paste Calendar */}
+          {currentStep === 1 && (
+            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white">Step 1: Upload College Academic Calendar</h2>
+                <p className="text-xs text-slate-400">Upload your PDF schedule or copy-paste text so we can read holidays & exam dates.</p>
+              </div>
+
+              <div className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${uploadedFileName ? 'border-emerald-500 bg-emerald-950/10 hover:border-emerald-400' : 'border-slate-700 bg-slate-900/30 hover:border-indigo-500'}`}>
+                <input
+                  type="file"
+                  accept=".pdf,.ics,.csv,.json"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="mb-2 flex justify-center">
+                  {uploadedFileName ? (
+                    <svg className="w-8 h-8 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <div className="text-indigo-400"><Icons.Upload /></div>
+                  )}
+                </div>
+                <span className="text-sm font-bold block text-slate-200">
+                  {loading ? 'Reading File Content...' : (uploadedFileName ? `📄 ${uploadedFileName}` : 'Choose PDF, ICS, CSV, or JSON')}
+                </span>
+                <span className="text-xs text-slate-500 mt-1 block">
+                  {uploadedFileName ? 'Click or drag here to choose a different file' : 'Supported standard formats parsed client-side'}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 block">Or Paste Schedule Text:</label>
+                <textarea
+                  rows={4}
+                  value={rawTextImport}
+                  onChange={(e) => setRawTextImport(e.target.value)}
+                  placeholder="e.g. 15 August 2026 - Independence Day&#10;28 April 2026 - VI Semester Exams Start"
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-350 rounded-lg p-3 text-xs outline-none focus:border-indigo-500 font-mono"
+                ></textarea>
                 <button
-                  key={num}
-                  onClick={() => handleSemesterSelect(num)}
-                  className={`py-3.5 px-4 rounded-xl border font-bold text-sm transition-all ${
-                    semester === num
-                      ? 'bg-indigo-650 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                      : 'bg-slate-900 border-slate-750 text-slate-400 hover:bg-slate-800'
-                  }`}
+                  onClick={triggerTextImport}
+                  disabled={!rawTextImport.trim()}
+                  className="w-full bg-indigo-650 hover:bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
                 >
-                  Sem {num}
+                  Extract Dates
                 </button>
-              ))}
+              </div>
+
+              <div className="border-t border-slate-750 pt-4 flex justify-between items-center text-xs">
+                <span className="text-slate-400">Currently parsed events: <span className="font-bold text-slate-200">{events.length}</span></span>
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  disabled={!isStep1Valid}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue <Icons.ChevronRight />
+                </button>
+              </div>
             </div>
+          )}
 
-            <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 text-xs space-y-3 text-slate-350">
-              <span className="block font-bold text-slate-400 uppercase tracking-wider mb-1">Auto-Detection Summary</span>
-              
-              <div>
-                <span className="font-semibold block mb-0.5">Semester Working Days Rule:</span>
-                {semester >= 7 ? (
-                  <span className="text-rose-400 font-semibold">⚠️ Monday, Tuesday, Wednesday only (Thu-Sun Off).</span>
-                ) : (
-                  <span className="text-indigo-400 font-semibold">ℹ️ Monday to Friday are working days (Sat, Sun Off).</span>
-                )}
+          {/* STEP 2: Select Semester (runs auto-detection) */}
+          {currentStep === 2 && (
+            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white">Step 2: Which semester are you teaching?</h2>
+                <p className="text-xs text-slate-400">Selecting a semester determines the weekly college working days and auto-fills term dates from the parsed calendar.</p>
               </div>
 
-              <div>
-                <span className="font-semibold block mb-0.5">Semester Start Date:</span>
-                {detectedStartFeedback ? (
-                  <span className="text-emerald-400 font-bold">✨ {detectedStartFeedback}</span>
-                ) : (
-                  <div className="space-y-1">
-                    <span className="text-amber-500 block font-medium">⚠️ Could not detect Class Start date. Please select it manually:</span>
-                    <input
-                      type="date"
-                      value={semesterStartDate}
-                      onChange={(e) => setSemesterStartDate(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
-                    />
-                  </div>
-                )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {getAvailableSemesters().map(num => (
+                  <button
+                    key={num}
+                    onClick={() => handleSemesterSelect(num)}
+                    className={`py-3.5 px-4 rounded-xl border font-bold text-sm transition-all ${semester === num
+                        ? 'bg-indigo-650 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-900 border-slate-750 text-slate-400 hover:bg-slate-800'
+                      }`}
+                  >
+                    Sem {num}
+                  </button>
+                ))}
               </div>
 
-              <div>
-                <span className="font-semibold block mb-0.5">First Mid Term Start Date (Exam 1):</span>
-                {detectedExam1Feedback ? (
-                  <span className="text-emerald-400 font-bold">✨ {detectedExam1Feedback}</span>
-                ) : (
-                  <div className="space-y-1">
-                    <span className="text-amber-500 block">⚠️ 1st Mid Term date not detected. Provide manually:</span>
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 text-xs space-y-3 text-slate-350">
+                <span className="block font-bold text-slate-400 uppercase tracking-wider mb-1">Auto-Detection Summary</span>
+
+                <div>
+                  <span className="font-semibold block mb-0.5">Semester Working Days Rule:</span>
+                  {semester >= 7 ? (
+                    <span className="text-rose-400 font-semibold">⚠️ Monday, Tuesday, Wednesday only (Thu-Sun Off).</span>
+                  ) : (
+                    <span className="text-indigo-400 font-semibold">ℹ️ Monday to Friday are working days (Sat, Sun Off).</span>
+                  )}
+                </div>
+
+                <div>
+                  <span className="font-semibold block mb-0.5">Semester Start Date:</span>
+                  {detectedStartFeedback ? (
+                    <span className="text-emerald-400 font-bold">✨ {detectedStartFeedback}</span>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-amber-500 block font-medium">⚠️ Could not detect Class Start date. Please select it manually:</span>
+                      <input
+                        type="date"
+                        value={semesterStartDate}
+                        onChange={(e) => setSemesterStartDate(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <span className="font-semibold block mb-0.5">First Mid Term Start Date (Exam 1):</span>
+                  {detectedExam1Feedback ? (
+                    <span className="text-emerald-400 font-bold">✨ {detectedExam1Feedback}</span>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-amber-500 block">⚠️ 1st Mid Term date not detected. Provide manually:</span>
+                      <input
+                        type="date"
+                        value={exam1StartDate}
+                        onChange={(e) => handleExam1StartChange(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <span className="font-semibold block mb-0.5">Second Mid Term Start Date (Exam 2):</span>
+                  {detectedExam2Feedback ? (
+                    <span className="text-emerald-400 font-bold">✨ {detectedExam2Feedback}</span>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-amber-500 block">⚠️ 2nd Mid Term date not detected. Provide manually:</span>
+                      <input
+                        type="date"
+                        value={exam2StartDate}
+                        onChange={(e) => handleExam2StartChange(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setCurrentStep(1)}
+                  className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
+                >
+                  <Icons.ChevronLeft /> Back
+                </button>
+                <button
+                  onClick={() => setCurrentStep(3)}
+                  disabled={!isStep2Valid}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue <Icons.ChevronRight />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Midterm Exams Configuration */}
+          {currentStep === 3 && (
+            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white">Step 3: Midterm Exams Configuration</h2>
+                <p className="text-xs text-slate-400">Specify the starting and ending dates for both midterm exams. Both exam periods will be excluded from the semester's working days.</p>
+              </div>
+
+              {/* Exam 1 settings */}
+              <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
+                <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">1. First Mid Term Examination</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
                     <input
                       type="date"
                       value={exam1StartDate}
                       onChange={(e) => handleExam1StartChange(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
                     />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Ending Date</label>
+                    <input
+                      type="date"
+                      value={exam1EndDate}
+                      onChange={(e) => handleExam1EndDateChange(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  Duration: <strong className="text-slate-350">{exam1Duration} {exam1Duration === 1 ? 'day' : 'days'}</strong>
+                </div>
               </div>
 
-              <div>
-                <span className="font-semibold block mb-0.5">Second Mid Term Start Date (Exam 2):</span>
-                {detectedExam2Feedback ? (
-                  <span className="text-emerald-400 font-bold">✨ {detectedExam2Feedback}</span>
-                ) : (
-                  <div className="space-y-1">
-                    <span className="text-amber-500 block">⚠️ 2nd Mid Term date not detected. Provide manually:</span>
+              {/* Exam 2 settings */}
+              <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
+                <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">2. Second Mid Term Examination</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
                     <input
                       type="date"
                       value={exam2StartDate}
                       onChange={(e) => handleExam2StartChange(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Ending Date</label>
+                    <input
+                      type="date"
+                      value={exam2EndDate}
+                      onChange={(e) => handleExam2EndDateChange(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  Duration: <strong className="text-slate-350">{exam2Duration} {exam2Duration === 1 ? 'day' : 'days'}</strong>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
+                >
+                  <Icons.ChevronLeft /> Back
+                </button>
+                <button
+                  onClick={() => setCurrentStep(4)}
+                  disabled={!isStep3Valid}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue <Icons.ChevronRight />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Configure Class Days */}
+          {currentStep === 4 && (
+            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white">Step 4: Select weekly teaching weekdays</h2>
+                <p className="text-xs text-slate-400">Select which weekdays you are scheduled to take lectures. We will match this with the working rules of the semester.</p>
+              </div>
+
+              <div className="bg-slate-900/50 p-5 border border-slate-750 rounded-xl space-y-4">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
+                      const isSelected = classDays.includes(idx);
+                      const isCollegeWorking = (semester >= 1 && semester <= 6)
+                        ? (idx >= 1 && idx <= 5)
+                        : (idx >= 1 && idx <= 3);
+
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => handleToggleCourseDay(idx)}
+                          className={`py-2.5 px-4 rounded-lg border text-xs font-bold transition-all relative ${isSelected
+                              ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
+                              : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                            } ${!isCollegeWorking && isSelected ? 'ring-2 ring-rose-500/50' : ''}`}
+                        >
+                          {day}
+                          {!isCollegeWorking && isSelected && (
+                            <span className="absolute -top-1.5 -right-1 text-[8px] bg-rose-600 text-white rounded px-0.8 font-bold border border-slate-900" title="Non-working college day for this semester!">
+                              !
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-2 leading-relaxed">
+                    ⚠️ Note: Weekdays marked with an exclamation (!) fall outside the standard college working days for Sem {semester} (Sem 1-6 are Mon-Fri, Sem 7-8 are Mon-Wed).
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setCurrentStep(3)}
+                  className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
+                >
+                  <Icons.ChevronLeft /> Back
+                </button>
+                <button
+                  onClick={() => setCurrentStep(5)}
+                  disabled={!isStep4Valid}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Calculate Schedule <Icons.ChevronRight />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: Final Working Dates Dashboard */}
+          {currentStep === 5 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+
+              {/* Left Hand: Calculated working dates list */}
+              <div className="lg:col-span-1 space-y-6">
+
+                <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan Summary</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Calculated schedule parameters</p>
+                  </div>
+
+                  <div className="bg-slate-900/50 p-4 border border-slate-750 rounded-xl space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Target Semester:</span>
+                      <span className="font-semibold text-slate-200">Sem {semester}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Class Weekdays:</span>
+                      <span className="font-semibold text-slate-200">
+                        {classDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Teaching Dates:</span>
+                      <span className="font-bold text-indigo-400">{calculatedClassDates.length} Classes</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-800 pt-2 text-[10px] text-slate-500">
+                      <span>* teaching range stops one day before 2nd Mid Term:</span>
+                      <span className="font-semibold text-slate-400">{exam2StartDate ? addDays(exam2StartDate, -1) : 'TBA'}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => exportWorkingDatesToCsv(semester, calculatedClassDates, exam1StartDate, exam1EndDate)}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow shadow-emerald-600/10"
+                    >
+                      <Icons.Download /> Export Dates (CSV)
+                    </button>
+
+                    <button
+                      onClick={() => setShowPrintPreview(true)}
+                      className="w-full bg-indigo-650 hover:bg-indigo-600 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow shadow-indigo-600/10"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Print / Save PDF (A4)
+                    </button>
+                  </div>
+
+                  <div className="pt-2 text-center border-t border-slate-750">
+                    <button
+                      onClick={() => setCurrentStep(2)}
+                      className="text-xs text-indigo-400 hover:underline font-bold"
+                    >
+                      ⏪ Change Parameters
+                    </button>
+                  </div>
+                </div>
+
+                {/* Working Dates Table List */}
+                <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scheduled Working Dates</h4>
+
+                  <div className="overflow-x-auto max-h-[400px] border border-slate-750 rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 border-b border-slate-750 text-slate-400 uppercase font-bold tracking-wider">
+                          <th className="p-3 w-16 text-center">Lec #</th>
+                          <th className="p-3">Date (DD-MM-YYYY)</th>
+                          <th className="p-3 w-28">Type</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {calculatedClassDates.map((wd, index) => (
+                          <tr key={index} className={`hover:bg-slate-800/30 transition-colors ${wd.isExtra ? 'bg-emerald-950/20' : ''}`}>
+                            <td className="p-3 font-bold text-center text-slate-500">{index + 1}</td>
+                            <td className="p-3 font-semibold text-slate-200 whitespace-nowrap font-mono">
+                              {formatToDdMmYyyy(wd.date)}
+                              <span className="text-[9px] text-slate-500 font-sans block">{wd.dayName}</span>
+                            </td>
+                            <td className="p-3">
+                              {wd.eventName ? (
+                                <span className="text-[10px] text-indigo-400 font-semibold">{wd.eventName}</span>
+                              ) : (
+                                <span className="text-slate-400">{wd.isExtra ? 'Extra Override' : 'Scheduled Class'}</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Hand: Visual calendar with legend checkboxes */}
+              <div className="lg:col-span-2 space-y-6">
+
+                {/* Visual Calendar */}
+                <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="text-md font-bold text-white">Visual Working Calendar</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Circles indicate teaching class dates. Click any day to toggle overrides.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={handlePrevMonth} className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 rounded-lg">
+                        <Icons.ChevronLeft />
+                      </button>
+                      <span className="text-sm font-bold text-slate-100 min-w-[120px] text-center font-mono">
+                        {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button onClick={handleNextMonth} className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 rounded-lg">
+                        <Icons.ChevronRight />
+                      </button>
+                    </div>
+                  </div>
+
+                  {renderInteractiveCalendar()}
+
+                  {/* Legend Checkboxes (If selected, shows count) */}
+                  <div className="flex flex-wrap gap-4 mt-6 text-xs border-t border-slate-700/60 pt-4 text-slate-400 select-none">
+
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={showCounts.lectures}
+                        onChange={(e) => setShowCounts({ ...showCounts, lectures: e.target.checked })}
+                        className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="w-3.5 h-3.5 bg-indigo-650 border-indigo-500 border-2 rounded"></span>
+                      <span>Circled Lecture {showCounts.lectures && <strong className="text-indigo-400">({lecturesCount})</strong>}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={showCounts.holidays}
+                        onChange={(e) => setShowCounts({ ...showCounts, holidays: e.target.checked })}
+                        className="rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-rose-500"
+                      />
+                      <span className="w-3.5 h-3.5 bg-rose-500/10 border-rose-500/40 border rounded"></span>
+                      <span>Holiday {showCounts.holidays && <strong className="text-rose-400">({holidaysCount})</strong>}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={showCounts.exams}
+                        onChange={(e) => setShowCounts({ ...showCounts, exams: e.target.checked })}
+                        className="rounded bg-slate-900 border-slate-700 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="w-3.5 h-3.5 bg-amber-500/10 border-amber-500/40 border rounded"></span>
+                      <span>Exams {showCounts.exams && <strong className="text-amber-400">({examsCount})</strong>}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={showCounts.weekends}
+                        onChange={(e) => setShowCounts({ ...showCounts, weekends: e.target.checked })}
+                        className="rounded bg-slate-900 border-slate-700 text-slate-500 focus:ring-slate-500"
+                      />
+                      <span className="w-3.5 h-3.5 bg-slate-900 border border-slate-800 rounded"></span>
+                      <span>Weekend Off {showCounts.weekends && <strong className="text-slate-400">({weekendsCount})</strong>}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={showCounts.cancelled}
+                        onChange={(e) => setShowCounts({ ...showCounts, cancelled: e.target.checked })}
+                        className="rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="w-3.5 h-3.5 bg-slate-855 line-through border border-slate-800 rounded"></span>
+                      <span>Cancelled Class {showCounts.cancelled && <strong className="text-red-400">({cancelledCount})</strong>}</span>
+                    </label>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </main>
+
+        {/* Override dialog modal */}
+        {calendarPopupDate && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
+              <h4 className="text-sm font-bold text-white mb-2">Schedule Override</h4>
+              <p className="text-[11px] text-slate-400 mb-4">Set manual override for date <span className="font-mono bg-slate-900 px-1 py-0.5 rounded text-indigo-400">{calendarPopupDate}</span></p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Action Override</label>
+                  <select
+                    value={calendarPopupForm.type}
+                    onChange={(e) => setCalendarPopupForm({ ...calendarPopupForm, type: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                  >
+                    <option value="holiday">Declare College Holiday</option>
+                    <option value="cancel_class">Cancel lecture for this day</option>
+                    <option value="extra_class">Schedule extra lecture session on this day</option>
+                    <option value="regular_class">Revert to standard teaching day</option>
+                    <option value="regular_off">Revert to standard off day</option>
+                  </select>
+                </div>
+
+                {['holiday', 'cancel_class', 'extra_class'].includes(calendarPopupForm.type) && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Label / Reason</label>
+                    <input
+                      type="text"
+                      value={calendarPopupForm.title}
+                      onChange={(e) => setCalendarPopupForm({ ...calendarPopupForm, title: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-750 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                      placeholder="e.g. Festival, Make-up session, etc."
                     />
                   </div>
                 )}
-              </div>
-            </div>
 
-            <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => setCurrentStep(1)}
-                className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
-              >
-                <Icons.ChevronLeft /> Back
-              </button>
-              <button
-                onClick={() => setCurrentStep(3)}
-                className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs"
-              >
-                Continue <Icons.ChevronRight />
-              </button>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleSaveDayDialog} className="flex-1 bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs">Apply</button>
+                  <button onClick={() => setCalendarPopupDate(null)} className="flex-1 bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold py-2 rounded-lg text-xs">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
         )}
+      </div> {/* Closing .no-print wrapper */}
 
-        {/* STEP 3: Midterm Exams Configuration */}
-        {currentStep === 3 && (
-          <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-lg font-bold text-white">Step 3: Midterm Exams Configuration</h2>
-              <p className="text-xs text-slate-400">Specify the starting and ending dates for both midterm exams. Both exam periods will be excluded from the semester's working days.</p>
-            </div>
+      {/* Printable PDF Report */}
+      <div id="printable-academic-report" className="print-only">
+        {renderPrintReport()}
+      </div>
 
-            {/* Exam 1 settings */}
-            <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
-              <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">1. First Mid Term Examination</span>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
-                  <input
-                    type="date"
-                    value={exam1StartDate}
-                    onChange={(e) => handleExam1StartChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Ending Date</label>
-                  <input
-                    type="date"
-                    value={exam1EndDate}
-                    onChange={(e) => handleExam1EndDateChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="text-[10px] text-slate-500">
-                Duration: <strong className="text-slate-350">{exam1Duration} {exam1Duration === 1 ? 'day' : 'days'}</strong>
-              </div>
-            </div>
-
-            {/* Exam 2 settings */}
-            <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
-              <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">2. Second Mid Term Examination</span>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
-                  <input
-                    type="date"
-                    value={exam2StartDate}
-                    onChange={(e) => handleExam2StartChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Ending Date</label>
-                  <input
-                    type="date"
-                    value={exam2EndDate}
-                    onChange={(e) => handleExam2EndDateChange(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="text-[10px] text-slate-500">
-                Duration: <strong className="text-slate-350">{exam2Duration} {exam2Duration === 1 ? 'day' : 'days'}</strong>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => setCurrentStep(2)}
-                className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
-              >
-                <Icons.ChevronLeft /> Back
-              </button>
-              <button
-                onClick={() => setCurrentStep(4)}
-                className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs"
-              >
-                Continue <Icons.ChevronRight />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Configure Class Days */}
-        {currentStep === 4 && (
-          <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-lg font-bold text-white">Step 4: Select weekly teaching weekdays</h2>
-              <p className="text-xs text-slate-400">Select which weekdays you are scheduled to take lectures. We will match this with the working rules of the semester.</p>
-            </div>
-
-            <div className="bg-slate-900/50 p-5 border border-slate-750 rounded-xl space-y-4">
-              <div>
-                <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
-                <div className="flex flex-wrap gap-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
-                    const isSelected = classDays.includes(idx);
-                    const isCollegeWorking = (semester >= 1 && semester <= 6)
-                      ? (idx >= 1 && idx <= 5)
-                      : (idx >= 1 && idx <= 3);
-
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => handleToggleCourseDay(idx)}
-                        className={`py-2.5 px-4 rounded-lg border text-xs font-bold transition-all relative ${
-                          isSelected
-                            ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
-                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
-                        } ${!isCollegeWorking && isSelected ? 'ring-2 ring-rose-500/50' : ''}`}
-                      >
-                        {day}
-                        {!isCollegeWorking && isSelected && (
-                          <span className="absolute -top-1.5 -right-1 text-[8px] bg-rose-600 text-white rounded px-0.8 font-bold border border-slate-900" title="Non-working college day for this semester!">
-                            !
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <span className="text-[10px] text-slate-500 block mt-2 leading-relaxed">
-                  ⚠️ Note: Weekdays marked with an exclamation (!) fall outside the standard college working days for Sem {semester} (Sem 1-6 are Mon-Fri, Sem 7-8 are Mon-Wed).
-                </span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => setCurrentStep(3)}
-                className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
-              >
-                <Icons.ChevronLeft /> Back
-              </button>
-              <button
-                onClick={() => setCurrentStep(5)}
-                disabled={classDays.length === 0}
-                className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40"
-              >
-                Calculate Schedule <Icons.ChevronRight />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 5: Final Working Dates Dashboard */}
-        {currentStep === 5 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-            
-            {/* Left Hand: Calculated working dates list */}
-            <div className="lg:col-span-1 space-y-6">
-              
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan Summary</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Calculated schedule parameters</p>
-                </div>
-
-                <div className="bg-slate-900/50 p-4 border border-slate-750 rounded-xl space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Target Semester:</span>
-                    <span className="font-semibold text-slate-200">Sem {semester}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Class Weekdays:</span>
-                    <span className="font-semibold text-slate-200">
-                      {classDays.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Teaching Dates:</span>
-                    <span className="font-bold text-indigo-400">{calculatedClassDates.length} Classes</span>
-                  </div>
-                  <div className="flex justify-between border-t border-slate-800 pt-2 text-[10px] text-slate-500">
-                    <span>* teaching range stops one day before 2nd Mid Term:</span>
-                    <span className="font-semibold text-slate-400">{exam2StartDate ? addDays(exam2StartDate, -1) : 'TBA'}</span>
-                  </div>
-                </div>
-
+      {/* Screen Print Preview Modal */}
+      {showPrintPreview && (
+        <div className="preview-modal-overlay no-print" onClick={() => setShowPrintPreview(false)}>
+          <div className="preview-modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="preview-modal-header">
+              <h3>Academic Plan Report - Print Preview (A4)</h3>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => exportWorkingDatesToCsv(semester, calculatedClassDates)}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow shadow-emerald-600/10"
+                  onClick={() => window.print()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1.5 transition-colors shadow shadow-emerald-600/10"
                 >
-                  <Icons.Download /> Export Dates (CSV)
+                  <Icons.Download /> Print / Save PDF
                 </button>
-
-                <div className="pt-2 text-center border-t border-slate-750">
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    className="text-xs text-indigo-400 hover:underline font-bold"
-                  >
-                    ⏪ Change Parameters
-                  </button>
-                </div>
-              </div>
-
-              {/* Working Dates Table List */}
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scheduled Working Dates</h4>
-                
-                <div className="overflow-x-auto max-h-[400px] border border-slate-750 rounded-xl">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-900 border-b border-slate-750 text-slate-400 uppercase font-bold tracking-wider">
-                        <th className="p-3 w-16 text-center">Lec #</th>
-                        <th className="p-3">Date (DD-MM-YYYY)</th>
-                        <th className="p-3 w-28">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {calculatedClassDates.map((wd, index) => (
-                        <tr key={index} className={`hover:bg-slate-800/30 transition-colors ${wd.isExtra ? 'bg-emerald-950/20' : ''}`}>
-                          <td className="p-3 font-bold text-center text-slate-500">{index + 1}</td>
-                          <td className="p-3 font-semibold text-slate-200 whitespace-nowrap font-mono">
-                            {formatToDdMmYyyy(wd.date)}
-                            <span className="text-[9px] text-slate-500 font-sans block">{wd.dayName}</span>
-                          </td>
-                          <td className="p-3">
-                            {wd.eventName ? (
-                              <span className="text-[10px] text-indigo-400 font-semibold">{wd.eventName}</span>
-                            ) : (
-                              <span className="text-slate-400">{wd.isExtra ? 'Extra Override' : 'Scheduled Class'}</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Right Hand: Visual calendar with legend checkboxes */}
-            <div className="lg:col-span-2 space-y-6">
-
-              {/* Visual Calendar */}
-              <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="text-md font-bold text-white">Visual Working Calendar</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Circles indicate teaching class dates. Click any day to toggle overrides.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={handlePrevMonth} className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 rounded-lg">
-                      <Icons.ChevronLeft />
-                    </button>
-                    <span className="text-sm font-bold text-slate-100 min-w-[120px] text-center font-mono">
-                      {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                    </span>
-                    <button onClick={handleNextMonth} className="p-1.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 rounded-lg">
-                      <Icons.ChevronRight />
-                    </button>
-                  </div>
-                </div>
-
-                {renderInteractiveCalendar()}
-
-                {/* Legend Checkboxes (If selected, shows count) */}
-                <div className="flex flex-wrap gap-4 mt-6 text-xs border-t border-slate-700/60 pt-4 text-slate-400 select-none">
-                  
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={showCounts.lectures}
-                      onChange={(e) => setShowCounts({ ...showCounts, lectures: e.target.checked })}
-                      className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="w-3.5 h-3.5 bg-indigo-650 border-indigo-500 border-2 rounded"></span>
-                    <span>Circled Lecture {showCounts.lectures && <strong className="text-indigo-400">({lecturesCount})</strong>}</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={showCounts.holidays}
-                      onChange={(e) => setShowCounts({ ...showCounts, holidays: e.target.checked })}
-                      className="rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-rose-500"
-                    />
-                    <span className="w-3.5 h-3.5 bg-rose-500/10 border-rose-500/40 border rounded"></span>
-                    <span>Holiday {showCounts.holidays && <strong className="text-rose-400">({holidaysCount})</strong>}</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={showCounts.exams}
-                      onChange={(e) => setShowCounts({ ...showCounts, exams: e.target.checked })}
-                      className="rounded bg-slate-900 border-slate-700 text-amber-600 focus:ring-amber-500"
-                    />
-                    <span className="w-3.5 h-3.5 bg-amber-500/10 border-amber-500/40 border rounded"></span>
-                    <span>Exams {showCounts.exams && <strong className="text-amber-400">({examsCount})</strong>}</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={showCounts.weekends}
-                      onChange={(e) => setShowCounts({ ...showCounts, weekends: e.target.checked })}
-                      className="rounded bg-slate-900 border-slate-700 text-slate-500 focus:ring-slate-500"
-                    />
-                    <span className="w-3.5 h-3.5 bg-slate-900 border border-slate-800 rounded"></span>
-                    <span>Weekend Off {showCounts.weekends && <strong className="text-slate-400">({weekendsCount})</strong>}</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={showCounts.cancelled}
-                      onChange={(e) => setShowCounts({ ...showCounts, cancelled: e.target.checked })}
-                      className="rounded bg-slate-900 border-slate-700 text-red-600 focus:ring-red-500"
-                    />
-                    <span className="w-3.5 h-3.5 bg-slate-855 line-through border border-slate-800 rounded"></span>
-                    <span>Cancelled Class {showCounts.cancelled && <strong className="text-red-400">({cancelledCount})</strong>}</span>
-                  </label>
-
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-      </main>
-
-      {/* Override dialog modal */}
-      {calendarPopupDate && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
-            <h4 className="text-sm font-bold text-white mb-2">Schedule Override</h4>
-            <p className="text-[11px] text-slate-400 mb-4">Set manual override for date <span className="font-mono bg-slate-900 px-1 py-0.5 rounded text-indigo-400">{calendarPopupDate}</span></p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Action Override</label>
-                <select
-                  value={calendarPopupForm.type}
-                  onChange={(e) => setCalendarPopupForm({ ...calendarPopupForm, type: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-2 text-xs outline-none"
+                <button
+                  onClick={() => setShowPrintPreview(false)}
+                  className="bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors"
                 >
-                  <option value="holiday">Declare College Holiday</option>
-                  <option value="cancel_class">Cancel lecture for this day</option>
-                  <option value="extra_class">Schedule extra lecture session on this day</option>
-                  <option value="regular_class">Revert to standard teaching day</option>
-                  <option value="regular_off">Revert to standard off day</option>
-                </select>
+                  Close Preview
+                </button>
               </div>
-
-              {['holiday', 'cancel_class', 'extra_class'].includes(calendarPopupForm.type) && (
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Label / Reason</label>
-                  <input
-                    type="text"
-                    value={calendarPopupForm.title}
-                    onChange={(e) => setCalendarPopupForm({ ...calendarPopupForm, title: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-750 text-white rounded-lg px-3 py-2 text-xs outline-none"
-                    placeholder="e.g. Festival, Make-up session, etc."
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button onClick={handleSaveDayDialog} className="flex-1 bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs">Apply</button>
-                <button onClick={() => setCalendarPopupDate(null)} className="flex-1 bg-slate-700 hover:bg-slate-650 text-slate-200 font-bold py-2 rounded-lg text-xs">Cancel</button>
+            </div>
+            <div className="preview-modal-body">
+              <div className="preview-a4-sheet">
+                {renderPrintReport()}
               </div>
             </div>
           </div>

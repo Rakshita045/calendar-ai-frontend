@@ -203,14 +203,26 @@ export function formatToDdMmYyyy(dateStr) {
 }
 
 /**
- * Exports the calculated working dates to CSV format (single column, dd-mm-yyyy)
+ * Exports the calculated working dates to CSV format with sections, dates, and days.
  */
-export function exportWorkingDatesToCsv(semester, workingDates) {
+export function exportWorkingDatesToCsv(semester, workingDates, exam1StartDate, exam1EndDate) {
   const csvRows = [];
   
-  // Format each date to dd-mm-yyyy and push as a single column row
-  workingDates.forEach((wd) => {
-    csvRows.push(formatToDdMmYyyy(wd.date));
+  const firstMidTermLectures = workingDates.filter(wd => wd.date < exam1StartDate);
+  const secondMidTermLectures = workingDates.filter(wd => wd.date > exam1EndDate);
+
+  csvRows.push("First Mid Term Lectures,");
+  csvRows.push("Date,Day");
+  firstMidTermLectures.forEach((wd) => {
+    csvRows.push(`${formatToDdMmYyyy(wd.date)},${wd.dayName}`);
+  });
+
+  csvRows.push(""); // Empty line separator
+
+  csvRows.push("Second Mid Term Lectures,");
+  csvRows.push("Date,Day");
+  secondMidTermLectures.forEach((wd) => {
+    csvRows.push(`${formatToDdMmYyyy(wd.date)},${wd.dayName}`);
   });
 
   // Create Blob and trigger download
@@ -227,3 +239,4 @@ export function exportWorkingDatesToCsv(semester, workingDates) {
   link.click();
   document.body.removeChild(link);
 }
+
