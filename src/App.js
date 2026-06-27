@@ -953,13 +953,19 @@ export default function App() {
 
     return (
       <div className="print-container">
-        <div className="print-header">
-          <img src="/poornima_logo.jpg" alt="Poornima College of Engineering Logo" className="print-logo" style={{ height: '55px', width: 'auto', marginBottom: '6px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
-          <h1 style={{ textAlign: 'center' }}>Poornima College of Engineering</h1>
-          <h2 style={{ fontSize: '12px', fontWeight: '750', color: '#475569', margin: '2px 0 0 0', textTransform: 'uppercase', letterSpacing: '0.3px', textAlign: 'center' }}>
-            Subject Deployment Planning {subjectName ? `- ${subjectName}` : ''}
-          </h2>
-          <div className="print-header-details" style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+        <div className="print-header" style={{ borderBottom: '2px solid #cbd5e1', paddingBottom: '8px', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', justifyContent: 'center' }}>
+            <img src="/poornima_logo.jpg" alt="Poornima College of Engineering Logo" className="print-logo" style={{ height: '65px', width: 'auto' }} />
+            <div style={{ textAlign: 'left' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#1e1b4b', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Poornima College of Engineering
+              </h1>
+              <h2 style={{ fontSize: '11px', fontWeight: '750', color: '#475569', margin: '2px 0 0 0', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                Subject Deployment Planning {subjectName ? `- ${subjectName}` : ''}
+              </h2>
+            </div>
+          </div>
+          <div className="print-header-details" style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '10px' }}>
             <span>Semester: <strong>Sem {semester}</strong></span>
             <span>|</span>
             <span>Plan Name: <strong>{sessionName}</strong></span>
