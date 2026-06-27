@@ -87,6 +87,7 @@ export default function App() {
   const [semesterStartDate, setSemesterStartDate] = useState('2026-08-03');
   const [lastTeachingDate, setLastTeachingDate] = useState('2026-11-20');
   const lastTeachingInputRef = React.useRef(null);
+  const [addOnEvents, setAddOnEvents] = useState([]);
 
   // Exam 1 (First Mid Term) State
   const [exam1StartDate, setExam1StartDate] = useState('2026-09-07');
@@ -237,13 +238,14 @@ export default function App() {
       classDays,
       events,
       currentStep,
-      uploadedFileName
+      uploadedFileName,
+      addOnEvents
     });
   }, [
     currentSessionId, sessionName, subjectName, semester, semesterStartDate, lastTeachingDate,
     exam1StartDate, exam1Duration, exam1EndDate, exam1InputMode,
     exam2StartDate, exam2Duration, exam2EndDate, exam2InputMode,
-    classDays, events, currentStep, uploadedFileName
+    classDays, events, currentStep, uploadedFileName, addOnEvents
   ]);
 
   // Exam 1 Dates Syncing
@@ -312,6 +314,7 @@ export default function App() {
 
       setClassDays(data.classDays || [1, 3, 5]);
       setEvents(data.events || []);
+      setAddOnEvents(data.addOnEvents || []);
       setCurrentStep(data.currentStep || 1);
       setUploadedFileName(data.uploadedFileName || '');
       localStorage.setItem('academic_active_session_id', id);
@@ -357,7 +360,8 @@ export default function App() {
       classDays: [1, 3, 5],
       events: [],
       currentStep: 1,
-      uploadedFileName: ''
+      uploadedFileName: '',
+      addOnEvents: []
     };
 
     setSemester(freshState.semester);
@@ -376,6 +380,7 @@ export default function App() {
 
     setClassDays(freshState.classDays);
     setEvents([]);
+    setAddOnEvents([]);
     setUploadedFileName('');
     setSubjectName('');
 
@@ -688,6 +693,32 @@ export default function App() {
     setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
   };
 
+  // Add-on Event Handlers
+  const handleAddAddOnEvent = () => {
+    setAddOnEvents(prev => [
+      ...prev,
+      {
+        id: 'ae-' + Date.now(),
+        title: '',
+        startDate: '',
+        endDate: ''
+      }
+    ]);
+  };
+
+  const handleUpdateAddOnEvent = (id, field, value) => {
+    setAddOnEvents(prev => prev.map(ae => {
+      if (ae.id === id) {
+        return { ...ae, [field]: value };
+      }
+      return ae;
+    }));
+  };
+
+  const handleRemoveAddOnEvent = (id) => {
+    setAddOnEvents(prev => prev.filter(ae => ae.id !== id));
+  };
+
   const handleOpenDayDialog = (dateStr) => {
     const dayOfWeek = new Date(dateStr).getDay();
     const isNormalClassDay = classDays.includes(dayOfWeek);
@@ -764,7 +795,8 @@ export default function App() {
     exam2StartDate,
     exam2EndDate,
     events,
-    courseClassDays: classDays
+    courseClassDays: classDays,
+    addOnEvents
   });
 
   // Calculate detailed counts of all types during the teaching term range (from semesterStartDate up to exam2StartDate - 1)
@@ -795,13 +827,17 @@ export default function App() {
       const isCancelled = dayEvents.some(e => e.type === 'cancel_class');
       const isExtra = dayEvents.some(e => e.type === 'extra_class');
 
+      const isAddOnEventPeriod = addOnEvents.some(ae =>
+        ae.startDate && ae.endDate && dateStr >= ae.startDate && dateStr <= ae.endDate
+      );
+
       let isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 6;
 
       const isCourseDay = classDays.includes(dayOfWeek);
 
       if (isExam1) {
         // counted in examsCount below, so we do not count it as weekend
-      } else if (isHoliday) {
+      } else if (isHoliday || isAddOnEventPeriod) {
         holidaysCount++;
       } else if (isCancelled) {
         cancelledCount++;
@@ -884,10 +920,14 @@ export default function App() {
       const isCourseDay = classDays.includes(dayOfWeek);
       const isCancelled = events.some(e => e.date === dateStr && e.type === 'cancel_class');
 
+      const matchingAddOn = addOnEvents.find(ae => ae.startDate && ae.endDate && dateStr >= ae.startDate && dateStr <= ae.endDate);
+
       let cellClass = "print-day-cell";
 
       if (isExam1 || isExam2) {
         cellClass += " exam";
+      } else if (matchingAddOn) {
+        cellClass += " holiday";
       } else if (isPostSemester) {
         cellClass += " other-month";
       } else if (ev && ev.type === 'holiday') {
@@ -1086,6 +1126,8 @@ export default function App() {
 
       const isCourseDay = classDays.includes(dayOfWeek);
 
+      const matchingAddOn = addOnEvents.find(ae => ae.startDate && ae.endDate && dateStr >= ae.startDate && dateStr <= ae.endDate);
+
       let cellClass = "bg-slate-800/20 hover:bg-slate-700/30 transition-colors border-slate-700/60";
       let textClass = "text-slate-300 font-semibold";
       let indicator = null;
@@ -1098,6 +1140,10 @@ export default function App() {
         cellClass = "bg-amber-500/15 border-amber-500/50";
         textClass = "text-amber-400 font-bold";
         indicator = <div className="text-[10px] text-amber-500/80 font-medium truncate mt-1">📝 2nd Mid Term</div>;
+      } else if (matchingAddOn) {
+        cellClass = "bg-rose-500/15 border-rose-500/50";
+        textClass = "text-rose-400 font-bold";
+        indicator = <div className="text-[10px] text-rose-400/85 font-medium truncate mt-1">🏷️ {matchingAddOn.title || 'Add-on Event'}</div>;
       } else if (isPostSemester) {
         cellClass = "bg-slate-900 border-slate-850 opacity-40";
         textClass = "text-slate-500";
@@ -1750,6 +1796,77 @@ export default function App() {
                     </label>
 
                   </div>
+                </div>
+
+                {/* Add-on Events Card */}
+                <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-4 mt-6">
+                  <div>
+                    <h3 className="text-md font-bold text-white flex items-center gap-2">
+                      <span>Add-on Events</span>
+                      <button
+                        onClick={handleAddAddOnEvent}
+                        className="p-1 bg-indigo-650 hover:bg-indigo-600 text-white rounded-lg flex items-center justify-center text-xs w-6 h-6 border-none cursor-pointer"
+                        title="Add Custom Event Range"
+                      >
+                        ➕
+                      </button>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Declare custom event dates (e.g. college fests, sports week, or preparation leaves). 
+                      <strong className="text-rose-400 block mt-1 font-semibold">⚠️ Note: The selected dates will be removed from working teaching days.</strong>
+                    </p>
+                  </div>
+
+                  {addOnEvents.length === 0 ? (
+                    <div className="text-center py-4 border border-dashed border-slate-750 rounded-xl text-slate-500 text-xs">
+                      No custom add-on events added yet. Click ➕ to create one.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {addOnEvents.map((ae) => (
+                        <div key={ae.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-slate-900/60 p-3.5 border border-slate-750 rounded-xl text-xs">
+                          <div className="flex-1 space-y-1 w-full">
+                            <label className="text-[10px] uppercase font-bold text-slate-500">Event Title / Reason</label>
+                            <input
+                              type="text"
+                              value={ae.title}
+                              onChange={(e) => handleUpdateAddOnEvent(ae.id, 'title', e.target.value)}
+                              placeholder="e.g. College Fest, Sports Day"
+                              className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500 font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-1 w-full sm:w-36">
+                            <label className="text-[10px] uppercase font-bold text-slate-500">Start Date</label>
+                            <input
+                              type="date"
+                              value={ae.startDate}
+                              onChange={(e) => handleUpdateAddOnEvent(ae.id, 'startDate', e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 text-xs outline-none focus:border-indigo-500 font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-1 w-full sm:w-36">
+                            <label className="text-[10px] uppercase font-bold text-slate-500">End Date</label>
+                            <input
+                              type="date"
+                              value={ae.endDate}
+                              onChange={(e) => handleUpdateAddOnEvent(ae.id, 'endDate', e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 text-xs outline-none focus:border-indigo-500 font-semibold"
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => handleRemoveAddOnEvent(ae.id)}
+                            className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 hover:border-rose-700 text-rose-400 rounded-lg flex items-center justify-center cursor-pointer mt-5 self-end sm:self-center"
+                            title="Remove this event"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>

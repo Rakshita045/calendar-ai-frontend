@@ -93,7 +93,8 @@ export function calculateWorkingDates({
   exam2StartDate,
   exam2EndDate,
   events,
-  courseClassDays
+  courseClassDays,
+  addOnEvents = []
 }) {
   if (!semesterStartDate || !exam1StartDate || !exam1EndDate || !exam2StartDate) {
     return [];
@@ -158,6 +159,11 @@ export function calculateWorkingDates({
     // 4. Course Scheduled Days Rule
     const isCourseScheduledDay = courseClassDays.includes(dayOfWeek);
 
+    // 5. Add-on Events Rule
+    const isAddOnEventPeriod = addOnEvents.some(ae => {
+      return ae.startDate && ae.endDate && dateStr >= ae.startDate && dateStr <= ae.endDate;
+    });
+
     // Standard working date check
     const isClassHeld = (forceExtraClass || (
       isSemesterWorkingDay &&
@@ -165,7 +171,8 @@ export function calculateWorkingDates({
       !isHoliday &&
       !isExam1Period &&
       !isExam2Period &&
-      !cancelClass
+      !cancelClass &&
+      !isAddOnEventPeriod
     ));
 
     if (isClassHeld) {
