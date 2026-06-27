@@ -85,11 +85,13 @@ export default function App() {
   // Term Parameters
   const [semester, setSemester] = useState(5);
   const [semesterStartDate, setSemesterStartDate] = useState('2026-08-03');
+  const [lastTeachingDate, setLastTeachingDate] = useState('2026-11-20');
+  const lastTeachingInputRef = React.useRef(null);
 
   // Exam 1 (First Mid Term) State
   const [exam1StartDate, setExam1StartDate] = useState('2026-09-07');
   const [exam1Duration, setExam1Duration] = useState(4);
-  const [exam1EndDate, setExam1EndDate] = useState('2026-09-10');
+  const [exam1EndDate, setExam1EndDate] = useState('');
   const [exam1InputMode, setExam1InputMode] = useState('duration');
 
   // Exam 2 (Second Mid Term) State
@@ -117,7 +119,10 @@ export default function App() {
   // Auto-detection results feedback state
   const [detectedStartFeedback, setDetectedStartFeedback] = useState(null);
   const [detectedExam1Feedback, setDetectedExam1Feedback] = useState(null);
-  const [detectedExam2Feedback, setDetectedExam2Feedback] = useState(null);
+  const [detectedLastTeachingFeedback, setDetectedLastTeachingFeedback] = useState(null);
+
+  // Ref for start date input to make pen clickable
+  const startDateInputRef = React.useRef(null);
 
   // Interactive Calendar month navigation
   const [calendarMonth, setCalendarMonth] = useState(new Date('2026-08-01'));
@@ -198,7 +203,7 @@ export default function App() {
         semesterStartDate: '2026-08-03',
         exam1StartDate: '2026-09-07',
         exam1Duration: 4,
-        exam1EndDate: '2026-09-10',
+        exam1EndDate: '',
         exam1InputMode: 'duration',
         exam2StartDate: '2026-11-23',
         exam2Duration: 5,
@@ -220,6 +225,7 @@ export default function App() {
       subjectName,
       semester,
       semesterStartDate,
+      lastTeachingDate,
       exam1StartDate,
       exam1Duration,
       exam1EndDate,
@@ -234,7 +240,7 @@ export default function App() {
       uploadedFileName
     });
   }, [
-    currentSessionId, sessionName, subjectName, semester, semesterStartDate,
+    currentSessionId, sessionName, subjectName, semester, semesterStartDate, lastTeachingDate,
     exam1StartDate, exam1Duration, exam1EndDate, exam1InputMode,
     exam2StartDate, exam2Duration, exam2EndDate, exam2InputMode,
     classDays, events, currentStep, uploadedFileName
@@ -243,44 +249,41 @@ export default function App() {
   // Exam 1 Dates Syncing
   const handleExam1StartChange = (val) => {
     setExam1StartDate(val);
-    const diff = getDaysDifference(val, exam1EndDate);
-    setExam1Duration(diff > 0 ? diff : 1);
-    if (new Date(val) > new Date(exam1EndDate)) {
-      setExam1EndDate(val);
+    if (exam1EndDate) {
+      const diff = getDaysDifference(val, exam1EndDate);
+      setExam1Duration(diff > 0 ? diff : 1);
+      if (new Date(val) > new Date(exam1EndDate)) {
+        setExam1EndDate('');
+        setExam1Duration(1);
+      }
+    } else {
       setExam1Duration(1);
     }
   };
 
   const handleExam1EndDateChange = (val) => {
     setExam1EndDate(val);
-    const diff = getDaysDifference(exam1StartDate, val);
-    setExam1Duration(diff > 0 ? diff : 1);
-    if (new Date(val) < new Date(exam1StartDate)) {
-      setExam1StartDate(val);
+    if (exam1StartDate && val) {
+      const diff = getDaysDifference(exam1StartDate, val);
+      setExam1Duration(diff > 0 ? diff : 1);
+      if (new Date(val) < new Date(exam1StartDate)) {
+        setExam1StartDate(val);
+        setExam1Duration(1);
+      }
+    } else {
       setExam1Duration(1);
     }
   };
 
-  // Exam 2 Dates Syncing
-  const handleExam2StartChange = (val) => {
-    setExam2StartDate(val);
-    const diff = getDaysDifference(val, exam2EndDate);
-    setExam2Duration(diff > 0 ? diff : 1);
-    if (new Date(val) > new Date(exam2EndDate)) {
-      setExam2EndDate(val);
-      setExam2Duration(1);
-    }
+  // Last Teaching Date Syncing
+  const handleLastTeachingDateChange = (val) => {
+    setLastTeachingDate(val);
+    const nextDay = addDays(val, 1);
+    setExam2StartDate(nextDay);
+    setExam2EndDate(addDays(nextDay, exam2Duration - 1));
   };
 
-  const handleExam2EndDateChange = (val) => {
-    setExam2EndDate(val);
-    const diff = getDaysDifference(exam2StartDate, val);
-    setExam2Duration(diff > 0 ? diff : 1);
-    if (new Date(val) < new Date(exam2StartDate)) {
-      setExam2StartDate(val);
-      setExam2Duration(1);
-    }
-  };
+
 
   const saveSessionData = (id, data) => {
     localStorage.setItem(`academic_session_${id}`, JSON.stringify(data));
@@ -295,10 +298,11 @@ export default function App() {
       setSubjectName(data.subjectName || '');
       setSemester(data.semester || 5);
       setSemesterStartDate(data.semesterStartDate || '2026-08-03');
+      setLastTeachingDate(data.lastTeachingDate || addDays(data.semesterStartDate || '2026-08-03', 90));
 
       setExam1StartDate(data.exam1StartDate || '2026-09-07');
       setExam1Duration(data.exam1Duration || 4);
-      setExam1EndDate(data.exam1EndDate || '2026-09-10');
+      setExam1EndDate((data.exam1EndDate === '2026-09-10' || data.exam1EndDate === '2026-09-11' || data.exam1EndDate === '2026-09-13') ? '' : (data.exam1EndDate || ''));
       setExam1InputMode(data.exam1InputMode || 'duration');
 
       setExam2StartDate(data.exam2StartDate || '2026-11-23');
@@ -341,13 +345,14 @@ export default function App() {
       subjectName: '',
       semester: 5,
       semesterStartDate: formatDate(new Date()),
+      lastTeachingDate: addDays(formatDate(new Date()), 90),
       exam1StartDate: addDays(formatDate(new Date()), 30),
       exam1Duration: 4,
-      exam1EndDate: addDays(formatDate(new Date()), 33),
+      exam1EndDate: '',
       exam1InputMode: 'duration',
-      exam2StartDate: addDays(formatDate(new Date()), 90),
+      exam2StartDate: addDays(formatDate(new Date()), 91),
       exam2Duration: 5,
-      exam2EndDate: addDays(formatDate(new Date()), 94),
+      exam2EndDate: addDays(formatDate(new Date()), 95),
       exam2InputMode: 'duration',
       classDays: [1, 3, 5],
       events: [],
@@ -357,6 +362,7 @@ export default function App() {
 
     setSemester(freshState.semester);
     setSemesterStartDate(freshState.semesterStartDate);
+    setLastTeachingDate(freshState.lastTeachingDate);
 
     setExam1StartDate(freshState.exam1StartDate);
     setExam1Duration(freshState.exam1Duration);
@@ -399,7 +405,7 @@ export default function App() {
   const detectTermDates = (semVal, currentEvents) => {
     let detectedStart = '';
     let detectedExam1 = '';
-    let detectedExam2 = '';
+    let detectedLastTeaching = '';
 
     const isNotEndEvent = (title) => {
       const lower = title.toLowerCase();
@@ -435,15 +441,16 @@ export default function App() {
         detectedExam1 = e.date;
       }
 
-      // Detect Second Mid Term Exams (earliest match)
-      if (isSemMatch && !detectedExam2 && (
-        titleLower.includes('second mid') ||
-        titleLower.includes('2nd mid') ||
-        titleLower.includes('mid term ii') ||
-        titleLower.includes('mid-term ii') ||
-        titleLower.includes('midterm ii')
-      ) && isNotEndEvent(e.title)) {
-        detectedExam2 = e.date;
+      // Detect Last Teaching Day (earliest match)
+      if (isSemMatch && !detectedLastTeaching && (
+        titleLower.includes('concluding of classes') ||
+        titleLower.includes('concluding of teaching') ||
+        titleLower.includes('teaching concludes') ||
+        titleLower.includes('last teaching day') ||
+        titleLower.includes('teaching ends') ||
+        titleLower.includes('classes end')
+      )) {
+        detectedLastTeaching = e.date;
       }
     }
 
@@ -468,43 +475,51 @@ export default function App() {
       if (firstExam) detectedExam1 = firstExam.date;
     }
 
-    if (!detectedExam2) {
-      const secondExam = currentEvents.find(e =>
-        (e.type === 'exam_2' || e.title.toLowerCase().includes('second mid') || e.title.toLowerCase().includes('2nd mid') || e.title.toLowerCase().includes('theory exam')) &&
-        isEventApplicableToSemester(e, semVal) &&
-        isNotEndEvent(e.title)
+    // Fallbacks for Last Teaching Day
+    if (!detectedLastTeaching) {
+      const generalLastTeaching = currentEvents.find(e =>
+        (e.title.toLowerCase().includes('concluding of classes') ||
+          e.title.toLowerCase().includes('concluding of teaching') ||
+          e.title.toLowerCase().includes('teaching concludes') ||
+          e.title.toLowerCase().includes('last teaching day') ||
+          e.title.toLowerCase().includes('teaching ends') ||
+          e.title.toLowerCase().includes('classes end')) &&
+        isEventApplicableToSemester(e, semVal)
       );
-      if (secondExam) detectedExam2 = secondExam.date;
+      if (generalLastTeaching) detectedLastTeaching = generalLastTeaching.date;
     }
 
     // Apply auto-detected values & give user feedback
     if (detectedStart) {
       setSemesterStartDate(detectedStart);
       setCalendarMonth(new Date(detectedStart));
-      setDetectedStartFeedback(`Auto-detected class start date: ${detectedStart}`);
+      setDetectedStartFeedback(`Auto-detected class start date: ${formatToDdMmYyyy(detectedStart)}`);
     } else {
-      setSemesterStartDate('');
+      const todayStr = formatDate(new Date());
+      setSemesterStartDate(todayStr);
+      setCalendarMonth(new Date(todayStr));
       setDetectedStartFeedback(null);
     }
 
     if (detectedExam1) {
       setExam1StartDate(detectedExam1);
       setExam1EndDate(addDays(detectedExam1, exam1Duration - 1));
-      setDetectedExam1Feedback(`Auto-detected 1st Mid Term start date: ${detectedExam1}`);
+      setDetectedExam1Feedback(`Auto-detected 1st Mid Term start date: ${formatToDdMmYyyy(detectedExam1)}`);
     } else {
       setExam1StartDate('');
       setExam1EndDate('');
       setDetectedExam1Feedback(null);
     }
 
-    if (detectedExam2) {
-      setExam2StartDate(detectedExam2);
-      setExam2EndDate(addDays(detectedExam2, exam2Duration - 1));
-      setDetectedExam2Feedback(`Auto-detected 2nd Mid Term start date: ${detectedExam2}`);
+    if (detectedLastTeaching) {
+      const nextDay = addDays(detectedLastTeaching, 1);
+      setExam2StartDate(nextDay);
+      setExam2EndDate(addDays(nextDay, exam2Duration - 1));
+      setDetectedLastTeachingFeedback(`Auto-detected last teaching day: ${formatToDdMmYyyy(detectedLastTeaching)}`);
     } else {
       setExam2StartDate('');
       setExam2EndDate('');
-      setDetectedExam2Feedback(null);
+      setDetectedLastTeachingFeedback(null);
     }
   };
 
@@ -676,9 +691,7 @@ export default function App() {
   const handleOpenDayDialog = (dateStr) => {
     const dayOfWeek = new Date(dateStr).getDay();
     const isNormalClassDay = classDays.includes(dayOfWeek);
-    const isSemesterWorking = (semester >= 1 && semester <= 6)
-      ? (dayOfWeek >= 1 && dayOfWeek <= 5)
-      : (dayOfWeek >= 1 && dayOfWeek <= 3);
+    const isSemesterWorking = dayOfWeek >= 1 && dayOfWeek <= 6;
 
     const dayEvents = events.filter(e => e.date === dateStr);
     const cancelEv = dayEvents.find(e => e.type === 'cancel_class');
@@ -782,12 +795,7 @@ export default function App() {
       const isCancelled = dayEvents.some(e => e.type === 'cancel_class');
       const isExtra = dayEvents.some(e => e.type === 'extra_class');
 
-      let isSemWorking = false;
-      if (semester >= 1 && semester <= 6) {
-        isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 5;
-      } else if (semester === 7 || semester === 8) {
-        isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 3;
-      }
+      let isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 6;
 
       const isCourseDay = classDays.includes(dayOfWeek);
 
@@ -814,9 +822,9 @@ export default function App() {
 
   // Step Completeness Validation Rules
   const isStep1Valid = !!uploadedFileName && !!subjectName.trim();
-  const isStep2Valid = !!(isStep1Valid && semester && semesterStartDate && exam1StartDate && exam2StartDate);
-  const isStep3Valid = !!(isStep2Valid && exam1StartDate && exam1EndDate && exam2StartDate && exam2EndDate);
-  const isStep4Valid = !!(isStep3Valid && classDays.length > 0);
+  const isStep2Valid = !!(isStep1Valid && semester && semesterStartDate);
+  const isStep3Valid = !!(isStep2Valid && classDays.length > 0);
+  const isStep4Valid = !!(isStep3Valid && exam1StartDate && exam1EndDate);
 
   // Helper to retrieve A4-sized calendar month ranges
   const getMonthsInSemester = () => {
@@ -871,9 +879,7 @@ export default function App() {
       const isExam2 = dateStr >= exam2StartDate && dateStr <= exam2EndDate;
       const isPostSemester = dateStr > exam2EndDate;
 
-      const isSemWorking = (semester >= 1 && semester <= 6)
-        ? (dayOfWeek >= 1 && dayOfWeek <= 5)
-        : (dayOfWeek >= 1 && dayOfWeek <= 3);
+      const isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 6;
 
       const isCourseDay = classDays.includes(dayOfWeek);
       const isCancelled = events.some(e => e.date === dateStr && e.type === 'cancel_class');
@@ -948,19 +954,17 @@ export default function App() {
     return (
       <div className="print-container">
         <div className="print-header">
-          <h1>Poornima College of Engineering</h1>
-          <h2 style={{ fontSize: '12px', fontWeight: '750', color: '#475569', margin: '2px 0 0 0', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+          <img src="/poornima_logo.jpg" alt="Poornima College of Engineering Logo" className="print-logo" style={{ height: '55px', width: 'auto', marginBottom: '6px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+          <h1 style={{ textAlign: 'center' }}>Poornima College of Engineering</h1>
+          <h2 style={{ fontSize: '12px', fontWeight: '750', color: '#475569', margin: '2px 0 0 0', textTransform: 'uppercase', letterSpacing: '0.3px', textAlign: 'center' }}>
             Subject Deployment Planning {subjectName ? `- ${subjectName}` : ''}
           </h2>
-          <div className="print-header-details">
-            <div>
-              <span>Semester: <strong>Sem {semester}</strong></span>
-              <span className="mx-2">|</span>
-              <span>Plan Name: <strong>{sessionName}</strong></span>
-            </div>
-            <div>
-              <span>Classes: <strong>{classDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}</strong></span>
-            </div>
+          <div className="print-header-details" style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+            <span>Semester: <strong>Sem {semester}</strong></span>
+            <span>|</span>
+            <span>Plan Name: <strong>{sessionName}</strong></span>
+            <span>|</span>
+            <span>Classes: <strong>{classDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}</strong></span>
           </div>
         </div>
 
@@ -1072,9 +1076,7 @@ export default function App() {
       const isExam2 = dateStr >= exam2StartDate && dateStr <= exam2EndDate;
       const isPostSemester = dateStr > exam2EndDate;
 
-      const isSemWorking = (semester >= 1 && semester <= 6)
-        ? (dayOfWeek >= 1 && dayOfWeek <= 5)
-        : (dayOfWeek >= 1 && dayOfWeek <= 3);
+      const isSemWorking = dayOfWeek >= 1 && dayOfWeek <= 6;
 
       const isCourseDay = classDays.includes(dayOfWeek);
 
@@ -1161,11 +1163,11 @@ export default function App() {
           <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="p-1 bg-slate-800 rounded-xl shadow-lg border border-slate-700/60 overflow-hidden flex items-center justify-center w-11 h-11">
-                <img src="/logo192.png" alt="Subject Deployment Planning Logo" className="w-full h-full object-contain rounded-lg" />
+                <img src="/poornima_logo.jpg" alt="Poornima College of Engineering Logo" className="w-full h-full object-contain rounded-lg" />
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">Subject Deployment Planning</h1>
-                <p className="text-xs text-slate-400">Step-by-Step Working Dates Calculator</p>
+                <p className="text-xs text-slate-400">Poornima College of Engineering</p>
               </div>
             </div>
 
@@ -1224,7 +1226,7 @@ export default function App() {
               className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep2Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
                 } ${currentStep === 3 ? 'bg-indigo-650 text-white font-bold' : ''}`}
             >
-              3. Midterm Exams
+              3. Lecture Days
             </button>
             <span className="text-slate-700">➔</span>
 
@@ -1234,7 +1236,7 @@ export default function App() {
               className={`px-2.5 py-1 rounded-lg transition-colors ${!isStep3Valid ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-800 hover:text-white'
                 } ${currentStep === 4 ? 'bg-indigo-650 text-white font-bold' : ''}`}
             >
-              4. Class Days
+              4. Midterm Exams
             </button>
             <span className="text-slate-700">➔</span>
 
@@ -1349,67 +1351,89 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 text-xs space-y-3 text-slate-350">
+              <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 text-xs space-y-4 text-slate-350">
                 <span className="block font-bold text-slate-400 uppercase tracking-wider mb-1">Auto-Detection Summary</span>
 
-                <div>
-                  <span className="font-semibold block mb-0.5">Semester Working Days Rule:</span>
-                  {semester >= 7 ? (
-                    <span className="text-rose-400 font-semibold">⚠️ Monday, Tuesday, Wednesday only (Thu-Sun Off).</span>
-                  ) : (
-                    <span className="text-indigo-400 font-semibold">ℹ️ Monday to Friday are working days (Sat, Sun Off).</span>
-                  )}
+                {/* Commencement Date */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-slate-350">Semester Start Date:</span>
+                    {detectedStartFeedback ? (
+                      <span className="text-[10px] text-emerald-400 font-medium">✨ Auto-detected</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-500 font-medium">⚠️ Manual Select</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 p-2.5 rounded-xl">
+                    <input
+                      ref={startDateInputRef}
+                      type="date"
+                      value={semesterStartDate}
+                      onChange={(e) => {
+                        setSemesterStartDate(e.target.value);
+                        if (e.target.value) {
+                          setCalendarMonth(new Date(e.target.value));
+                        }
+                      }}
+                      className="bg-transparent text-white font-bold text-xs outline-none cursor-pointer flex-1 w-full border-none no-native-datepicker"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => startDateInputRef.current?.showPicker()}
+                      className="text-slate-400 hover:text-white text-sm select-none bg-transparent border-none cursor-pointer p-0"
+                      title="Edit commencement date"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-normal">
+                    You can change the starting date by selecting a new date using the picker or clicking the pen mark beside it.
+                  </p>
                 </div>
 
-                <div>
-                  <span className="font-semibold block mb-0.5">Semester Start Date:</span>
-                  {detectedStartFeedback ? (
-                    <span className="text-emerald-400 font-bold">✨ {detectedStartFeedback}</span>
-                  ) : (
-                    <div className="space-y-1">
-                      <span className="text-amber-500 block font-medium">⚠️ Could not detect Class Start date. Please select it manually:</span>
-                      <input
-                        type="date"
-                        value={semesterStartDate}
-                        onChange={(e) => setSemesterStartDate(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
-                      />
-                    </div>
-                  )}
+                {/* Last Teaching Date */}
+                <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-slate-350">Last Teaching Day:</span>
+                    {detectedLastTeachingFeedback ? (
+                      <span className="text-[10px] text-emerald-400 font-medium">✨ Auto-detected</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-500 font-medium">⚠️ Defaulted (90 Days)</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 p-2.5 rounded-xl">
+                    <input
+                      ref={lastTeachingInputRef}
+                      type="date"
+                      value={lastTeachingDate}
+                      onChange={(e) => handleLastTeachingDateChange(e.target.value)}
+                      className="bg-transparent text-white font-bold text-xs outline-none cursor-pointer flex-1 w-full border-none no-native-datepicker"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => lastTeachingInputRef.current?.showPicker()}
+                      className="text-slate-400 hover:text-white text-sm select-none bg-transparent border-none cursor-pointer p-0"
+                      title="Edit last teaching date"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-normal">
+                    You can change the last teaching day by selecting a new date using the picker or clicking the pen mark beside it.
+                  </p>
                 </div>
 
-                <div>
-                  <span className="font-semibold block mb-0.5">First Mid Term Start Date (Exam 1):</span>
-                  {detectedExam1Feedback ? (
-                    <span className="text-emerald-400 font-bold">✨ {detectedExam1Feedback}</span>
-                  ) : (
-                    <div className="space-y-1">
-                      <span className="text-amber-500 block">⚠️ 1st Mid Term date not detected. Provide manually:</span>
-                      <input
-                        type="date"
-                        value={exam1StartDate}
-                        onChange={(e) => handleExam1StartChange(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <span className="font-semibold block mb-0.5">Second Mid Term Start Date (Exam 2):</span>
-                  {detectedExam2Feedback ? (
-                    <span className="text-emerald-400 font-bold">✨ {detectedExam2Feedback}</span>
-                  ) : (
-                    <div className="space-y-1">
-                      <span className="text-amber-500 block">⚠️ 2nd Mid Term date not detected. Provide manually:</span>
-                      <input
-                        type="date"
-                        value={exam2StartDate}
-                        onChange={(e) => handleExam2StartChange(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 text-white rounded p-1 text-xs"
-                      />
-                    </div>
-                  )}
+                <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                  <div>
+                    <span className="font-semibold block mb-0.5 text-slate-400">First Mid Term (Exam 1) Detection:</span>
+                    {detectedExam1Feedback ? (
+                      <span className="text-emerald-400 font-bold">✨ {detectedExam1Feedback}</span>
+                    ) : (
+                      <span className="text-slate-500 font-medium">Not detected in calendar (configure in Step 4)</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1431,17 +1455,68 @@ export default function App() {
             </div>
           )}
 
-          {/* STEP 3: Midterm Exams Configuration */}
+          {/* STEP 3: Configure Class Days */}
           {currentStep === 3 && (
             <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
               <div className="text-center space-y-2">
-                <h2 className="text-lg font-bold text-white">Step 3: Midterm Exams Configuration</h2>
-                <p className="text-xs text-slate-400">Specify the starting and ending dates for both midterm exams. Both exam periods will be excluded from the semester's working days.</p>
+                <h2 className="text-lg font-bold text-white">Step 3: Select weekly teaching days</h2>
+                <p className="text-xs text-slate-400">Select which weekdays you are scheduled to take lectures. Choose the actual days from Monday to Saturday.</p>
+              </div>
+
+              <div className="bg-slate-900/50 p-5 border border-slate-750 rounded-xl space-y-4">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
+                      const idx = index + 1; // Mon = 1, Tue = 2, ..., Sat = 6
+                      const isSelected = classDays.includes(idx);
+
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => handleToggleCourseDay(idx)}
+                          className={`py-2.5 px-4 rounded-lg border text-xs font-bold transition-all ${isSelected
+                              ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
+                              : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                            }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
+                >
+                  <Icons.ChevronLeft /> Back
+                </button>
+                <button
+                  onClick={() => setCurrentStep(4)}
+                  disabled={!isStep3Valid}
+                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Continue <Icons.ChevronRight />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Midterm Exam Configuration */}
+          {currentStep === 4 && (
+            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white">Step 4: First Mid Term Exam Configuration</h2>
+                <p className="text-xs text-slate-400">Specify the starting and ending dates for the first mid term exam. The exam period will be excluded from the semester's working days.</p>
               </div>
 
               {/* Exam 1 settings */}
               <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
-                <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">1. First Mid Term Examination</span>
+                <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">First Mid Term Examination Details</span>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
@@ -1464,95 +1539,6 @@ export default function App() {
                 </div>
                 <div className="text-[10px] text-slate-500">
                   Duration: <strong className="text-slate-350">{exam1Duration} {exam1Duration === 1 ? 'day' : 'days'}</strong>
-                </div>
-              </div>
-
-              {/* Exam 2 settings */}
-              <div className="bg-slate-900/30 p-4 border border-slate-750 rounded-xl space-y-4">
-                <span className="block font-bold text-xs text-indigo-400 uppercase tracking-wide">2. Second Mid Term Examination</span>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Starting Date</label>
-                    <input
-                      type="date"
-                      value={exam2StartDate}
-                      onChange={(e) => handleExam2StartChange(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Ending Date</label>
-                    <input
-                      type="date"
-                      value={exam2EndDate}
-                      onChange={(e) => handleExam2EndDateChange(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-                <div className="text-[10px] text-slate-500">
-                  Duration: <strong className="text-slate-350">{exam2Duration} {exam2Duration === 1 ? 'day' : 'days'}</strong>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-2">
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="text-xs text-slate-400 hover:text-slate-300 font-bold flex items-center gap-1"
-                >
-                  <Icons.ChevronLeft /> Back
-                </button>
-                <button
-                  onClick={() => setCurrentStep(4)}
-                  disabled={!isStep3Valid}
-                  className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Continue <Icons.ChevronRight />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Configure Class Days */}
-          {currentStep === 4 && (
-            <div className="max-w-lg mx-auto bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 space-y-6">
-              <div className="text-center space-y-2">
-                <h2 className="text-lg font-bold text-white">Step 4: Select weekly teaching weekdays</h2>
-                <p className="text-xs text-slate-400">Select which weekdays you are scheduled to take lectures. We will match this with the working rules of the semester.</p>
-              </div>
-
-              <div className="bg-slate-900/50 p-5 border border-slate-750 rounded-xl space-y-4">
-                <div>
-                  <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Weekly Class Days:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
-                      const isSelected = classDays.includes(idx);
-                      const isCollegeWorking = (semester >= 1 && semester <= 6)
-                        ? (idx >= 1 && idx <= 5)
-                        : (idx >= 1 && idx <= 3);
-
-                      return (
-                        <button
-                          key={day}
-                          onClick={() => handleToggleCourseDay(idx)}
-                          className={`py-2.5 px-4 rounded-lg border text-xs font-bold transition-all relative ${isSelected
-                              ? 'bg-indigo-650 border-indigo-500 text-white shadow shadow-indigo-600/10'
-                              : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
-                            } ${!isCollegeWorking && isSelected ? 'ring-2 ring-rose-500/50' : ''}`}
-                        >
-                          {day}
-                          {!isCollegeWorking && isSelected && (
-                            <span className="absolute -top-1.5 -right-1 text-[8px] bg-rose-600 text-white rounded px-0.8 font-bold border border-slate-900" title="Non-working college day for this semester!">
-                              !
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <span className="text-[10px] text-slate-500 block mt-2 leading-relaxed">
-                    ⚠️ Note: Weekdays marked with an exclamation (!) fall outside the standard college working days for Sem {semester} (Sem 1-6 are Mon-Fri, Sem 7-8 are Mon-Wed).
-                  </span>
                 </div>
               </div>
 
@@ -1603,8 +1589,8 @@ export default function App() {
                       <span className="font-bold text-indigo-400">{calculatedClassDates.length} Classes</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-800 pt-2 text-[10px] text-slate-500">
-                      <span>* teaching range stops one day before 2nd Mid Term:</span>
-                      <span className="font-semibold text-slate-400">{exam2StartDate ? addDays(exam2StartDate, -1) : 'TBA'}</span>
+                      <span>Last Teaching Day:</span>
+                      <span className="font-semibold text-slate-400">{lastTeachingDate ? formatToDdMmYyyy(lastTeachingDate) : 'TBA'}</span>
                     </div>
                   </div>
 

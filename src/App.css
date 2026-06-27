@@ -375,3 +375,10 @@
   border-radius: 4px;
 }
 
+/* Hide native datepicker indicators */
+.no-native-datepicker::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+

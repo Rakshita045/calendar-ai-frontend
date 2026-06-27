@@ -152,14 +152,8 @@ export function calculateWorkingDates({
     }
 
     // 3. Semester Working Days Rule:
-    // Sem 1-6: Mon-Fri working days
-    // Sem 7-8: Mon-Wed working days
-    let isSemesterWorkingDay = false;
-    if (semester >= 1 && semester <= 6) {
-      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5;
-    } else if (semester === 7 || semester === 8) {
-      isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 3;
-    }
+    // Monday to Saturday are working days (1 to 6)
+    let isSemesterWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 6;
 
     // 4. Course Scheduled Days Rule
     const isCourseScheduledDay = courseClassDays.includes(dayOfWeek);
@@ -199,7 +193,7 @@ export function calculateWorkingDates({
 export function formatToDdMmYyyy(dateStr) {
   if (!dateStr || !dateStr.includes('-')) return dateStr;
   const [y, m, d] = dateStr.split('-');
-  return `${d}-${m}-${y}`;
+  return `${d}/${m}/${y}`;
 }
 
 /**
@@ -219,7 +213,7 @@ export function exportWorkingDatesToCsv(semester, workingDates, exam1StartDate, 
 
   csvRows.push(""); // Empty line separator
 
-  csvRows.push("Second Mid Term Lectures,");
+  csvRows.push("Lectures after First Mid Term,");
   csvRows.push("Date,Day");
   secondMidTermLectures.forEach((wd) => {
     csvRows.push(`${formatToDdMmYyyy(wd.date)},${wd.dayName}`);
