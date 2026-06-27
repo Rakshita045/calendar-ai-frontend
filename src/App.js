@@ -799,8 +799,12 @@ export default function App() {
     addOnEvents
   });
 
+  const totalLectures = calculatedClassDates.length;
+  const firstLecDate = totalLectures > 0 ? calculatedClassDates[0].date : null;
+  const lastLecDate = totalLectures > 0 ? calculatedClassDates[totalLectures - 1].date : null;
+
   // Calculate detailed counts of all types during the teaching term range (from semesterStartDate up to exam2StartDate - 1)
-  let lecturesCount = calculatedClassDates.length;
+  let lecturesCount = totalLectures;
   let holidaysCount = 0;
   let examsCount = 0;
   let weekendsCount = 0;
@@ -936,6 +940,11 @@ export default function App() {
         cellClass += " cancelled";
       } else if (lec) {
         cellClass += " lecture";
+        if (firstLecDate && dateStr === firstLecDate) {
+          cellClass += " first-teaching";
+        } else if (lastLecDate && dateStr === lastLecDate) {
+          cellClass += " last-teaching";
+        }
       } else if (!isSemWorking || !isCourseDay) {
         // regular off day
       }
@@ -1082,6 +1091,30 @@ export default function App() {
               <div className="print-stat-label">8. Lectures (Post-Mid 1)</div>
             </div>
           </div>
+
+          {/* PDF Shapes Legend */}
+          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1', display: 'flex', gap: '20px', justifyContent: 'center', fontSize: '8px', fontWeight: 'bold', color: '#475569' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '10px', height: '10px', backgroundColor: '#dbeafe', border: '1px solid #93c5fd', borderRadius: '50%', display: 'inline-block' }}></span>
+              Teaching Day (Circle)
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '10px', height: '10px', backgroundColor: '#d1fae5', border: '2px double #34d399', borderRadius: '4px', display: 'inline-block' }}></span>
+              First Class (Double Circle)
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '10px', height: '10px', backgroundColor: '#ede9fe', border: '2px solid #8b5cf6', borderRadius: '0', display: 'inline-block' }}></span>
+              Last Class (Square)
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '10px', height: '10px', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', display: 'inline-block' }}></span>
+              Holiday / Event (Diamond)
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '10px', height: '10px', backgroundColor: '#fef3c7', border: '1px solid #fde047', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', display: 'inline-block' }}></span>
+              Exam Day (Triangle)
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -1153,12 +1186,22 @@ export default function App() {
         textClass = "text-rose-400 font-bold";
         indicator = <div className="text-[10px] text-rose-400/85 font-medium truncate mt-1">🏖️ {ev.title}</div>;
       } else if (lec) {
-        cellClass = "bg-indigo-600/25 border-indigo-500 border-2 shadow-sm scale-102";
-        textClass = "text-indigo-300 font-black";
+        const isFirst = firstLecDate && dateStr === firstLecDate;
+        const isLast = lastLecDate && dateStr === lastLecDate;
+        cellClass = isFirst 
+          ? "bg-emerald-600/25 border-emerald-500 border-2 shadow-sm scale-102"
+          : isLast
+            ? "bg-violet-600/25 border-violet-500 border-2 shadow-sm scale-102"
+            : "bg-indigo-600/25 border-indigo-500 border-2 shadow-sm scale-102";
+        textClass = isFirst
+          ? "text-emerald-300 font-black"
+          : isLast
+            ? "text-violet-300 font-black"
+            : "text-indigo-300 font-black";
         indicator = (
           <div className="mt-1">
             <div className="text-[10px] bg-indigo-600 text-white rounded px-1 py-0.5 truncate font-semibold">
-              Lecture #{lec.lectureNumber}
+              {isFirst ? '🚀 Lec #1' : isLast ? `🏁 Lec #${lec.lectureNumber}` : `Lecture #${lec.lectureNumber}`}
             </div>
             {lec.isExtra && <span className="text-[8px] bg-emerald-950 text-emerald-400 rounded px-1 py-0.2 mt-0.5 inline-block font-semibold">Extra</span>}
           </div>
