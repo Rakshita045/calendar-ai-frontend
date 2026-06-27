@@ -149,67 +149,37 @@
 }
 
 .print-day-cell {
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  margin: 1px;
+  padding: 2px 0;
+  border-radius: 2px;
   color: #334155;
+  font-weight: 650;
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: 2px;
 }
 
 .print-day-cell.other-month {
-  color: #cbd5e1;
+  color: #e2e8f0;
 }
 
-/* Teaching Days - Circle */
 .print-day-cell.lecture {
   background-color: #dbeafe !important;
   color: #1e40af !important;
   border: 1px solid #93c5fd !important;
-  border-radius: 50% !important;
+  font-weight: 800;
 }
 
-/* First Teaching Day - Double border / Emerald rounded square */
-.print-day-cell.lecture.first-teaching {
-  background-color: #d1fae5 !important;
-  color: #065f46 !important;
-  border: 2px double #34d399 !important;
-  border-radius: 4px !important;
-}
-
-/* Last Teaching Day - Thick Violet border square */
-.print-day-cell.lecture.last-teaching {
-  background-color: #ede9fe !important;
-  color: #5b21b6 !important;
-  border: 2px solid #8b5cf6 !important;
-  border-radius: 0px !important;
-}
-
-/* Holidays / Custom Events - Diamond shape */
 .print-day-cell.holiday {
   background-color: #fee2e2 !important;
   color: #b91c1c !important;
   border: 1px solid #fca5a5 !important;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%) !important;
-  font-weight: 800 !important;
 }
 
-/* Exams - Triangle shape */
 .print-day-cell.exam {
   background-color: #fef3c7 !important;
   color: #92400e !important;
   border: 1px solid #fde047 !important;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%) !important;
-  font-weight: 800 !important;
-  padding-top: 3px !important;
 }
 
-/* Cancelled Classes */
 .print-day-cell.cancelled {
   text-decoration: line-through;
   background-color: #f1f5f9 !important;
